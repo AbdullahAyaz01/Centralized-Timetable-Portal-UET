@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UET KSK Centralized Timetable Portal</title>
+  <meta name="description" content="Official UET KSK Kala Shah Kaku Campus Centralized Multi-Department Timetable Management Portal.">
+  
+  <!-- Fonts & FontAwesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- SheetJS CDN for Client-Side Excel Drag & Drop Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- PUBLIC EXECUTIVE LANDING PAGE (Appears when NO user is logged in) -->
+  <section id="viewLanding" class="landing-page-wrapper" style="display: block;">
+    <!-- Top Sticky Glass Nav -->
+    <nav class="landing-nav">
+      <div class="landing-brand">
+        <div class="landing-brand-logo">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div class="landing-brand-text">
+          <h2>UET KSK CAMPUS</h2>
+          <span>Centralized Timetable Portal</span>
+        </div>
+      </div>
+      <button class="hero-cta-btn" style="padding: 10px 24px; font-size: 0.95rem;" onclick="openLoginModal()">
+        <i class="fa-solid fa-right-to-bracket"></i> Login to Portal
+      </button>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="landing-hero-container">
+      <div class="hero-pill">
+        <i class="fa-solid fa-shield-halved"></i> Official Kala Shah Kaku Campus Academic Portal
+      </div>
+      <h1 class="hero-title">Centralized Multi-Department <span>Timetable System</span></h1>
+      <p class="hero-subtitle">Streamlined academic scheduling, real-time classroom allocation, and department-isolated coordinator management for UET KSK Campus.</p>
+      
+      <button class="hero-cta-btn" onclick="openLoginModal()">
+        <i class="fa-solid fa-right-to-bracket"></i> Access University Dashboard
+      </button>
+    </div>
+
+    <!-- System Capability Cards -->
+    <div class="landing-cards-grid">
+      <div class="feature-card">
+        <div class="feature-icon-box icon-green"><i class="fa-solid fa-building-columns"></i></div>
+        <h3>Centralized Master Schedule</h3>
+        <p>Real-time centralized matrix with automated schedule collision detection across all university academic blocks.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box icon-blue"><i class="fa-solid fa-door-closed"></i></div>
+        <h3>Smart Room Allocation</h3>
+        <p>Track lecture hall capacities, projector availability, and computer lab equipment (PCs) per department.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box icon-purple"><i class="fa-solid fa-shield-halved"></i></div>
+        <h3>Department Isolation Guard</h3>
+        <p>Protected role-based security. Department coordinators edit their own schedules while preserving cross-department visibility.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-box icon-orange"><i class="fa-solid fa-file-excel"></i></div>
+        <h3>Excel Drag & Drop Importer</h3>
+        <p>Import `.xlsx` timetable spreadsheets directly into room schedules with 1-click automatic preset data loader.</p>
+      </div>
+    </div>
+
+    <!-- Demo Accounts Console -->
+    <div class="demo-credentials-card">
+      <h3><i class="fa-solid fa-key"></i> Quick Demo Login Console</h3>
+      <p>Click any button below to instantly populate credentials into the login modal:</p>
+      <div class="demo-buttons-flex">
+        <button class="demo-login-btn" onclick="openLoginModal(); fillLogin('admin', 'admin123');">
+          <i class="fa-solid fa-user-shield" style="color: #c084fc;"></i> Super Admin (admin / admin123)
+        </button>
+        <button class="demo-login-btn" onclick="openLoginModal(); fillLogin('cs_admin', 'cs123');">
+          <i class="fa-solid fa-laptop-code" style="color: #4ade80;"></i> CS Dept Head (cs_admin / cs123)
+        </button>
+        <button class="demo-login-btn" onclick="openLoginModal(); fillLogin('ee_admin', 'ee123');">
+          <i class="fa-solid fa-bolt" style="color: #fb923c;"></i> EE Dept Head (ee_admin / ee123)
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- AUTHENTICATED DASHBOARD LAYOUT (Appears ONLY when logged in) -->
+  <div class="uet-layout" id="authenticatedLayout" style="display: none;">
+
+    <!-- UET KSK Left Sidebar Navigation -->
+    <aside class="uet-sidebar no-print" id="uetSidebar">
+      <!-- Sidebar Brand Header -->
+      <div class="sidebar-brand">
+        <div class="uet-logo-wrap">
+          <i class="fa-solid fa-graduation-cap uet-icon"></i>
+        </div>
+        <div class="uet-brand-info">
+          <h2>UET KSK</h2>
+          <span>Kala Shah Kaku Campus</span>
+        </div>
+      </div>
+
+      <!-- Navigation Menu Links -->
+      <nav class="sidebar-nav">
+        <ul>
+          <li class="nav-item active" id="navDashboard" onclick="switchMainView('viewDashboard', this)">
+            <a href="javascript:void(0)"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
+          </li>
+          <li class="nav-item" id="navDepts" onclick="switchMainView('viewDeptsTree', this)">
+            <a href="javascript:void(0)"><i class="fa-solid fa-building-columns"></i> <span>Departments</span></a>
+          </li>
+          <li class="nav-item" id="navTimetable" onclick="switchMainView('viewTimetable', this)">
+            <a href="javascript:void(0)"><i class="fa-solid fa-calendar-days"></i> <span>Timetable</span></a>
+          </li>
+          <li class="nav-item" id="navImport" onclick="switchMainView('viewExcelImport', this)">
+            <a href="javascript:void(0)"><i class="fa-solid fa-file-excel"></i> <span>Excel Drag & Drop</span></a>
+          </li>
+          <li class="nav-item" id="navRooms" onclick="switchMainView('viewRoomsManager', this)">
+            <a href="javascript:void(0)"><i class="fa-solid fa-door-open"></i> <span>Rooms Manager</span></a>
+          </li>
+          <li class="nav-item" id="navAdminCreds" style="display: none;" onclick="switchMainView('viewAdminCreds', this)">
+            <a href="javascript:void(0)"><i class="fa-solid fa-user-shield"></i> <span>Coordinator Passwords</span></a>
+          </li>
+        </ul>
+
+        <div class="sidebar-footer">
+          <button class="btn-sidebar-logout" onclick="handleLogout()">
+            <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Right Content Area -->
+    <div class="uet-content-wrapper">
+
+      <!-- Top Header Navbar -->
+      <header class="uet-header no-print">
+        <div class="header-left">
+          <button class="btn-sidebar-toggle" onclick="toggleSidebar()">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <h1 class="header-title">UET KSK Dashboard</h1>
+        </div>
+
+        <!-- Header Actions: Search, Notification, Profile -->
+        <div class="header-right">
+          <div class="header-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="globalSearchInput" placeholder="Search room or course..." oninput="handleSearch()">
+          </div>
+
+          <div class="notif-badge">
+            <i class="fa-solid fa-bell"></i>
+            <span class="badge-count">3</span>
+          </div>
+
+          <div class="user-profile-menu" id="userProfileContainer">
+            <!-- Rendered by auth.js -->
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Body Container -->
+      <main class="uet-main-body">
+
+        <!-- Top Announcement Banner -->
+        <div class="alert-banner no-print" id="alertBanner">
+          <div class="banner-content">
+            <i class="fa-solid fa-shield-halved banner-icon"></i>
+            <span><strong>UET KSK Multi-Department Isolation:</strong> Logged-in coordinators can view all timetables, add rooms, and modify schedules for their own department.</span>
+          </div>
+          <button class="btn-close-banner" onclick="this.parentElement.style.display='none'">&times;</button>
+        </div>
+
+        <!-- VIEW 1: DASHBOARD / OVERVIEW -->
+        <section id="viewDashboard" class="main-view active">
+          <!-- Overview Cards -->
+          <div class="stat-cards-grid">
+            <div class="stat-card">
+              <div class="stat-icon bg-green"><i class="fa-solid fa-building-columns"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statDeptCount">5</span>
+                <span class="stat-label">Departments</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon bg-blue"><i class="fa-solid fa-door-closed"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statRoomCount">16</span>
+                <span class="stat-label">Classrooms & Labs</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon bg-purple"><i class="fa-solid fa-calendar-check"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statSlotCount">0</span>
+                <span class="stat-label">Scheduled Lectures</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Departments Tree Preview -->
+          <div class="dashboard-split-grid mt-4">
+            <div class="card glass-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-building-columns"></i> Department & Room Navigation Tree</h3>
+                <span class="text-muted text-sm">Click [+] to expand rooms & view room timetable</span>
+              </div>
+              <div class="card-body">
+                <div id="dashboardDeptTree" class="dept-tree-container">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <div class="card glass-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-bolt"></i> Quick Tools & Room Finder</h3>
+              </div>
+              <div class="card-body">
+                <div class="action-buttons-stack">
+                  <button class="btn btn-primary btn-full" onclick="openRoomFinderModal()">
+                    <i class="fa-solid fa-door-open"></i> Search Free / Vacant Rooms
+                  </button>
+                  <button class="btn btn-secondary btn-full" id="btnDashboardExcelImport" onclick="switchMainView('viewExcelImport', document.getElementById('navImport'))">
+                    <i class="fa-solid fa-file-excel"></i> Drag & Drop Excel Sheet Upload
+                  </button>
+                  <button class="btn btn-accent btn-full" id="btnDashboardAddSlot" style="display: none;" onclick="openAddSlotModal()">
+                    <i class="fa-solid fa-plus-circle"></i> Add Schedule Slot
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: DEPARTMENTS & ROOMS TREE VIEW -->
+        <section id="viewDeptsTree" class="main-view" style="display: none;">
+          <div class="card glass-card">
+            <div class="card-header border-b">
+              <div>
+                <h2><i class="fa-solid fa-building-columns"></i> Departments & Room Allocation Tree</h2>
+                <p class="text-muted">Expand any department with [+] to see rooms (G-10, G-11, G-16, F-04, G-05, etc.) and click any room to inspect its weekly timetable.</p>
+              </div>
+              <div class="header-actions">
+                <button class="btn btn-accent" id="btnTreeAddDept" style="display: none;" onclick="openDeptManagementModal()">
+                  <i class="fa-solid fa-plus"></i> Add New Department
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="mainDeptTreeContainer" class="dept-tree-container large-tree">
+                <!-- Dynamically rendered collapsible tree view -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: CENTRALIZED TIMETABLE MATRIX -->
+        <section id="viewTimetable" class="main-view" style="display: none;">
+          <!-- Control Filter Panel -->
+          <div class="control-panel no-print mb-4">
+            <div class="filter-group">
+              <div class="filter-item">
+                <label><i class="fa-solid fa-building-columns"></i> Department</label>
+                <select id="filterDept" onchange="renderTimetable()">
+                  <option value="">🏛️ All Departments (Central Master View)</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <label><i class="fa-solid fa-layer-group"></i> Semester</label>
+                <select id="filterSemester" onchange="renderTimetable()">
+                  <option value="">All Semesters</option>
+                  <option value="1">Semester 1</option>
+                  <option value="2">Semester 2</option>
+                  <option value="3">Semester 3</option>
+                  <option value="4">Semester 4</option>
+                  <option value="5">Semester 5</option>
+                  <option value="6">Semester 6</option>
+                  <option value="7">Semester 7</option>
+                  <option value="8">Semester 8</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <label><i class="fa-solid fa-calendar-day"></i> Day</label>
+                <select id="filterDay" onchange="renderTimetable()">
+                  <option value="">All Days (Mon - Sat)</option>
+                  <option value="Monday">Monday</option>
+                  <option value="Tuesday">Tuesday</option>
+                  <option value="Wednesday">Wednesday</option>
+                  <option value="Thursday">Thursday</option>
+                  <option value="Friday">Friday</option>
+                  <option value="Saturday">Saturday</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <label><i class="fa-solid fa-door-closed"></i> Room Filter</label>
+                <select id="filterRoom" onchange="renderTimetable()">
+                  <option value="">All Rooms</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="panel-actions">
+              <button class="btn btn-secondary" onclick="openRoomFinderModal()">
+                <i class="fa-solid fa-door-open"></i> Find Free Rooms
+              </button>
+              <button class="btn btn-secondary" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> Print / PDF
+              </button>
+              
+              <!-- 1-Click Clear Entire Department Timetable Slots Button -->
+              <button class="btn btn-outline" id="btnClearDeptTimetable" style="display: none; color: var(--danger); border-color: var(--danger);" onclick="handleClearDeptTimetable()">
+                <i class="fa-solid fa-eraser"></i> Clear Dept Timetable (1-Click)
+              </button>
+
+              <button class="btn btn-primary" id="btnAddSlot" style="display: none;" onclick="openAddSlotModal()">
+                <i class="fa-solid fa-plus-circle"></i> Add Schedule Slot
+              </button>
+            </div>
+          </div>
+
+          <!-- Status Bar -->
+          <div class="status-bar mb-3">
+            <div id="activeFilterBadge" class="filter-badge-list">
+              <span class="badge badge-default">Showing Centralized University Schedule</span>
+            </div>
+            <div class="stats-counter" id="slotCounter">
+              Showing <strong id="slotCountNumber">0</strong> scheduled lectures/labs
+            </div>
+          </div>
+
+          <!-- Central Schedule Grid Container -->
+          <div class="timetable-card">
+            <div class="table-responsive" id="timetablePrintArea">
+              <div class="print-header">
+                <h2>UET KSK Centralized University Timetable Schedule</h2>
+                <p id="printSubtitle">Official Kala Shah Kaku Campus Schedule Portal</p>
+              </div>
+
+              <div id="gridWrapper" class="grid-wrapper">
+                <!-- Timetable Matrix Grid rendered here -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: DRAG & DROP EXCEL FILE IMPORTER -->
+        <section id="viewExcelImport" class="main-view" style="display: none;">
+          <div class="card glass-card">
+            <div class="card-header border-b">
+              <h2><i class="fa-solid fa-file-excel"></i> Drag & Drop Excel Timetable Importer</h2>
+              <p class="text-muted">Upload your department's timetable spreadsheet (`.xlsx` or `.csv`) to automatically populate schedule slots into the database.</p>
+            </div>
+            <div class="card-body">
+              
+              <!-- Dropzone Container -->
+              <div class="dropzone" id="excelDropzone">
+                <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+                <h3>Drag & Drop your Department `.xlsx` File Here</h3>
+                <p>or click to browse and select file from your computer</p>
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleFileSelect(event)">
+                <button class="btn btn-primary mt-3" onclick="document.getElementById('excelFileInput').click()">
+                  <i class="fa-solid fa-folder-open"></i> Browse Excel File
+                </button>
+              </div>
+
+              <!-- Quick Preset Importer for dashboard.xlsx -->
+              <div class="preset-import-box mt-4">
+                <h4><i class="fa-solid fa-database"></i> Pre-Loaded Campus Dummy Data (`dashboard.xlsx`)</h4>
+                <p>Click below to automatically read and parse the campus `dashboard.xlsx` dummy dataset into your active department schedule.</p>
+                <button class="btn btn-accent mt-2" onclick="importPresetDashboardXlsx()">
+                  <i class="fa-solid fa-bolt"></i> Auto-Import `dashboard.xlsx` File Data
+                </button>
+              </div>
+
+              <div id="importResultStatus" class="mt-4" style="display: none;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: ROOMS MANAGER PER DEPARTMENT -->
+        <section id="viewRoomsManager" class="main-view" style="display: none;">
+          <div class="card glass-card">
+            <div class="card-header border-b">
+              <div>
+                <h2><i class="fa-solid fa-door-open"></i> Department Rooms & Labs Dashboard</h2>
+                <p class="text-muted">Manage classrooms, capacity (chairs count), projector setup, and computer labs for your department.</p>
+              </div>
+              <button class="btn btn-primary" id="btnAddRoom" onclick="openAddRoomModal()">
+                <i class="fa-solid fa-plus"></i> Add New Room
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="form-grid mb-4" id="roomsListGrid">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: SUPER ADMIN COORDINATOR CREDENTIALS MANAGER -->
+        <section id="viewAdminCreds" class="main-view" style="display: none;">
+          <div class="card glass-card">
+            <div class="card-header border-b">
+              <div>
+                <h2><i class="fa-solid fa-user-shield"></i> Master Department Coordinator Credentials</h2>
+                <p class="text-muted">Super Admin dashboard to create departments, assign department heads, and manage login credentials.</p>
+              </div>
+              <button class="btn btn-accent" onclick="openDeptManagementModal()">
+                <i class="fa-solid fa-building-circle-check"></i> + Add Dept & Coordinator
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="adminCredsTableContainer">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div class="modal" id="loginModal">
+    <div class="modal-content glass-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-right-to-bracket"></i> Login to UET KSK Portal</h3>
+        <button class="modal-close" onclick="closeLoginModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="loginUsername" placeholder="e.g. cs_admin or admin" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" required>
+          </div>
+          <div id="loginError" class="form-error" style="display: none;"></div>
+          <button type="submit" class="btn btn-primary btn-full">Login</button>
+        </form>
+
+        <div class="demo-accounts">
+          <h4><i class="fa-solid fa-key"></i> Quick Demo Logins:</h4>
+          <div class="demo-chips">
+            <button class="chip" onclick="fillLogin('admin', 'admin123')">🔑 Super Admin (admin / admin123)</button>
+            <button class="chip" onclick="fillLogin('cs_admin', 'cs123')">💻 CS Dept Coordinator (cs_admin / cs123)</button>
+            <button class="chip" onclick="fillLogin('ee_admin', 'ee123')">⚡ EE Dept Coordinator (ee_admin / ee123)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Timetable Entry Modal -->
+  <div class="modal" id="slotModal">
+    <div class="modal-content glass-card modal-large">
+      <div class="modal-header">
+        <h3 id="slotModalTitle"><i class="fa-solid fa-calendar-plus"></i> Add Timetable Schedule Slot</h3>
+        <button class="modal-close" onclick="closeSlotModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="slotForm" onsubmit="handleSaveSlot(event)">
+          <input type="hidden" id="slotId">
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Department <span class="req">*</span></label>
+              <select id="slotDept" required onchange="onSlotDeptChange()"></select>
+            </div>
+
+            <div class="form-group">
+              <label>Course <span class="req">*</span></label>
+              <select id="slotCourse" required></select>
+            </div>
+
+            <div class="form-group">
+              <label>Classroom / Lab <span class="req">*</span></label>
+              <select id="slotRoom" required></select>
+            </div>
+
+            <div class="form-group">
+              <label>Day of Week <span class="req">*</span></label>
+              <select id="slotDay" required>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Start Time <span class="req">*</span></label>
+              <input type="time" id="slotStart" required value="08:00">
+            </div>
+
+            <div class="form-group">
+              <label>End Time <span class="req">*</span></label>
+              <input type="time" id="slotEnd" required value="09:00">
+            </div>
+
+            <div class="form-group">
+              <label>Class Section / Batch <span class="req">*</span></label>
+              <input type="text" id="slotSection" placeholder="e.g. CS-1A, EE-3B" required>
+            </div>
+
+            <div class="form-group">
+              <label>Semester <span class="req">*</span></label>
+              <select id="slotSemester" required>
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+                <option value="3">Semester 3</option>
+                <option value="4">Semester 4</option>
+                <option value="5">Semester 5</option>
+                <option value="6">Semester 6</option>
+                <option value="7">Semester 7</option>
+                <option value="8">Semester 8</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="slotError" class="form-error" style="display: none;"></div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeSlotModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Schedule Slot</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Availability Finder Modal -->
+  <div class="modal" id="roomFinderModal">
+    <div class="modal-content glass-card modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-door-open"></i> Room & Lab Availability Lookup</h3>
+        <button class="modal-close" onclick="closeRoomFinderModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="roomFinderForm" onsubmit="checkRoomAvailability(event)" class="finder-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Select Day</label>
+              <select id="rfDay" required>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Start Time</label>
+              <input type="time" id="rfStart" value="08:00" required>
+            </div>
+            <div class="form-group">
+              <label>End Time</label>
+              <input type="time" id="rfEnd" value="09:00" required>
+            </div>
+            <div class="form-group" style="display:flex; align-items:flex-end;">
+              <button type="submit" class="btn btn-primary btn-full">Search Free Rooms</button>
+            </div>
+          </div>
+        </form>
+
+        <div id="roomFinderResults" class="room-results-container">
+          <p class="placeholder-text">Select day and time range above to query vacant classrooms.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Department & Coordinator Account Modal (Super Admin) -->
+  <div class="modal" id="deptMgmtModal">
+    <div class="modal-content glass-card modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-building-circle-check"></i> Add Department & Coordinator Credentials</h3>
+        <button class="modal-close" onclick="closeDeptManagementModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addDeptCombinedForm" onsubmit="handleCreateDeptWithCredentials(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Department Name <span class="req">*</span></label>
+              <input type="text" id="newDeptName" placeholder="e.g. Civil Engineering" required>
+            </div>
+            <div class="form-group">
+              <label>Department Code <span class="req">*</span></label>
+              <input type="text" id="newDeptCode" placeholder="e.g. CIV" required>
+            </div>
+            <div class="form-group">
+              <label>Badge Color <span class="req">*</span></label>
+              <input type="color" id="newDeptColor" value="#006633" style="width: 100%; height: 40px; border:none; cursor:pointer;" required>
+            </div>
+          </div>
+
+          <hr style="border-color: var(--border-color); margin: 20px 0;">
+
+          <h4><i class="fa-solid fa-user-key"></i> Department Coordinator Account (Primary Editor)</h4>
+          <div class="form-grid mt-2">
+            <div class="form-group">
+              <label>Coordinator Full Name <span class="req">*</span></label>
+              <input type="text" id="newCoordName" placeholder="Dr. John Doe" required>
+            </div>
+            <div class="form-group">
+              <label>Login Username <span class="req">*</span></label>
+              <input type="text" id="newCoordUsername" placeholder="civ_admin" required>
+            </div>
+            <div class="form-group">
+              <label>Login Password <span class="req">*</span></label>
+              <input type="password" id="newCoordPassword" placeholder="••••••••" required>
+            </div>
+            <div class="form-group">
+              <label>Email Address <span class="req">*</span></label>
+              <input type="email" id="newCoordEmail" placeholder="civ@uet.edu.pk" required>
+            </div>
+          </div>
+
+          <div class="modal-footer mt-3">
+            <button type="button" class="btn btn-outline" onclick="closeDeptManagementModal()">Cancel</button>
+            <button type="submit" class="btn btn-accent">Create Dept & Credentials</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Room Modal -->
+  <div class="modal" id="addRoomModal">
+    <div class="modal-content glass-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-door-plus"></i> Add New Room / Lab</h3>
+        <button class="modal-close" onclick="closeAddRoomModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addRoomForm" onsubmit="handleCreateRoom(event)">
+          <div class="form-group">
+            <label>Target Department <span class="req">*</span></label>
+            <select id="roomDept" required></select>
+          </div>
+          <div class="form-group">
+            <label>Room Name / Number <span class="req">*</span></label>
+            <input type="text" id="roomName" placeholder="e.g. G-10 or G-05" required>
+          </div>
+          <div class="form-group">
+            <label>Seating Capacity (Chairs) <span class="req">*</span></label>
+            <input type="number" id="roomCapacity" value="50" required min="1">
+          </div>
+          <div class="form-group">
+            <label>Room Type <span class="req">*</span></label>
+            <select id="roomType" required onchange="onRoomTypeChange()">
+              <option value="Lecture Hall">Lecture Room</option>
+              <option value="Computer Lab">Computer Lab</option>
+            </select>
+          </div>
+          
+          <!-- Conditional Field: Shown ONLY when Room Type is Computer Lab -->
+          <div class="form-group" id="computersGroup" style="display: none;">
+            <label>Number of Computers <span class="req">*</span></label>
+            <input type="number" id="roomComputers" value="40" min="1">
+          </div>
+
+          <div class="form-group">
+            <label>Projector Available? <span class="req">*</span></label>
+            <select id="roomProjector" required>
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-full mt-3">Add Room</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
