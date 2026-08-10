@@ -115,7 +115,14 @@ async function loadMasterData() {
     masterCourses = await courseRes.json();
 
     document.getElementById('statDeptCount').textContent = masterDepartments.length;
-    document.getElementById('statRoomCount').textContent = masterRooms.length;
+
+    const classrooms = masterRooms.filter(r => r.room_type !== 'Computer Lab');
+    const labs = masterRooms.filter(r => r.room_type === 'Computer Lab');
+    const projectors = masterRooms.filter(r => r.projector === 1 || r.projector === 'Yes' || r.projector === '1');
+
+    if (document.getElementById('statClassroomCount')) document.getElementById('statClassroomCount').textContent = classrooms.length;
+    if (document.getElementById('statLabCount')) document.getElementById('statLabCount').textContent = labs.length;
+    if (document.getElementById('statProjectorCount')) document.getElementById('statProjectorCount').textContent = projectors.length;
 
     populateFilterDropdowns();
     renderDeptTree();
@@ -130,7 +137,13 @@ function populateFilterDropdowns() {
   const filterDept = document.getElementById('filterDept');
   if (filterDept) {
     filterDept.innerHTML = `<option value="">🏛️ All Departments (Central View)</option>` +
-      masterDepartments.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('');
+      masterDepartments.map(d => {
+        const dRooms = masterRooms.filter(r => Number(r.department_id) === Number(d.id));
+        const cCount = dRooms.filter(r => r.room_type !== 'Computer Lab').length;
+        const lCount = dRooms.filter(r => r.room_type === 'Computer Lab').length;
+        const pCount = dRooms.filter(r => r.projector === 1 || r.projector === 'Yes' || r.projector === '1').length;
+        return `<option value="${d.id}">${d.name} (${d.code}) — Classrooms: ${cCount} | Labs: ${lCount} | Projectors: ${pCount}</option>`;
+      }).join('');
   }
 
   const filterRoom = document.getElementById('filterRoom');
@@ -155,12 +168,18 @@ function renderDeptTree() {
       const roomList = d.rooms && d.rooms.length > 0 ? d.rooms : masterRooms.filter(r => Number(r.department_id) === Number(d.id));
       const canEditDept = canUserEditDept(d.id);
 
+      const cCount = roomList.filter(r => r.room_type !== 'Computer Lab').length;
+      const lCount = roomList.filter(r => r.room_type === 'Computer Lab').length;
+      const pCount = roomList.filter(r => r.projector === 1 || r.projector === 'Yes' || r.projector === '1').length;
+
       dashHtml += `
         <div class="dept-tree-node">
           <div class="dept-tree-header" onclick="toggleTreeNode('dash-node-${d.id}', this)">
             <div class="tree-toggle-btn" id="dash-btn-toggle-${d.id}">${isFirstOpen ? '-' : '+'}</div>
             <div class="dept-title"><i class="fa-solid fa-building-columns" style="color:${d.color || '#006633'}"></i> ${d.name} (${d.code})</div>
-            <span class="badge" style="background:${d.color || '#006633'}; color:#fff;">${roomList.length} Rooms</span>
+            <span class="badge bg-blue" style="color:#fff; margin-left:4px;">Classrooms: ${cCount}</span>
+            <span class="badge bg-purple" style="color:#fff; margin-left:4px;">Labs: ${lCount}</span>
+            <span class="badge bg-green" style="color:#fff; margin-left:4px;">📹 Projectors: ${pCount}</span>
           </div>
 
           <div class="dept-tree-children" id="dash-node-${d.id}" style="display: ${isFirstOpen ? 'flex' : 'none'};">
@@ -205,12 +224,18 @@ function renderDeptTree() {
       const roomList = d.rooms && d.rooms.length > 0 ? d.rooms : masterRooms.filter(r => Number(r.department_id) === Number(d.id));
       const canEditDept = canUserEditDept(d.id);
 
+      const cCount = roomList.filter(r => r.room_type !== 'Computer Lab').length;
+      const lCount = roomList.filter(r => r.room_type === 'Computer Lab').length;
+      const pCount = roomList.filter(r => r.projector === 1 || r.projector === 'Yes' || r.projector === '1').length;
+
       mainHtml += `
         <div class="dept-tree-node">
           <div class="dept-tree-header">
             <div class="tree-toggle-btn" id="main-btn-toggle-${d.id}" onclick="toggleTreeNode('main-node-${d.id}', this.parentElement)">${isFirstOpen ? '-' : '+'}</div>
             <div class="dept-title" onclick="toggleTreeNode('main-node-${d.id}', this.parentElement)"><i class="fa-solid fa-building-columns" style="color:${d.color || '#006633'}"></i> ${d.name} (${d.code})</div>
-            <span class="badge mr-2" style="background:${d.color || '#006633'}; color:#fff;">${roomList.length} Rooms</span>
+            <span class="badge bg-blue" style="color:#fff; margin-left:4px;">Classrooms: ${cCount}</span>
+            <span class="badge bg-purple" style="color:#fff; margin-left:4px;">Labs: ${lCount}</span>
+            <span class="badge bg-green" style="color:#fff; margin-left:4px;">📹 Projectors: ${pCount}</span>
             
             ${isSuperAdmin ? `
               <button class="btn-icon btn-icon-danger" title="Delete Department" onclick="event.stopPropagation(); handleDeleteDept(${d.id}, '${d.name}')">
@@ -450,7 +475,7 @@ function renderWeeklyMatrix(entries, selectedDay) {
 
       html += `<div class="day-column">`;
 
-      const isLunchBreak = (slot.start === '12:00' && slot.end === '13:00' && day !== 'Friday');
+      const isLunchBreak = (slot.start === '12:00' && slot.end === '13:00');
       const isJummahBreak = (slot.start === '13:00' && slot.end === '14:00' && day === 'Friday');
 
       if (isLunchBreak) {
@@ -1081,9 +1106,9 @@ async function handleSaveSlot(e) {
     return;
   }
 
-  // Mon-Thu Lunch Break check (12:00 to 13:00)
-  if (day_of_week !== 'Friday' && start_time < '13:00' && end_time > '12:00') {
-    errDiv.innerHTML = `<strong>⚠️ Break Time Conflict:</strong> 12:00 PM to 01:00 PM is Lunch / Recess Break (Mon–Thu). Classes cannot be scheduled during this break.`;
+  // Lunch Break check (12:00 to 13:00 on Mon-Fri)
+  if (start_time < '13:00' && end_time > '12:00') {
+    errDiv.innerHTML = `<strong>⚠️ Break Time Conflict:</strong> 12:00 PM to 01:00 PM is Lunch / Recess Break. Classes cannot be scheduled during this break.`;
     errDiv.style.display = 'block';
     return;
   }

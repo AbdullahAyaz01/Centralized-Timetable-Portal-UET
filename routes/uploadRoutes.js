@@ -335,7 +335,7 @@ router.post('/excel', isAuthenticated, upload.single('file'), async (req, res) =
           if (!cellVal || cellVal === 0 || cellVal === '0') continue;
 
           // Skip slots overlapping designated breaks
-          const isLunchBreak = (dayName !== 'Friday' && slotInfo.start < '13:00' && slotInfo.end > '12:00');
+          const isLunchBreak = (slotInfo.start < '13:00' && slotInfo.end > '12:00');
           const isJummahBreak = (dayName === 'Friday' && slotInfo.start < '14:00' && slotInfo.end > '13:00');
 
           if (isLunchBreak || isJummahBreak) {

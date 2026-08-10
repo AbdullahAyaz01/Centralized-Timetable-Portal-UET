@@ -65,8 +65,8 @@ router.post('/', isAuthenticated, async (req, res) => {
     if (day_of_week === 'Saturday' || day_of_week === 'Sunday') {
       return res.status(400).json({ error: 'Saturday and Sunday are university holidays. Room requests can only be submitted Monday through Friday.' });
     }
-    if (day_of_week !== 'Friday' && start_time < '13:00' && end_time > '12:00') {
-      return res.status(400).json({ error: '12:00 PM to 01:00 PM is Lunch / Recess Break (Mon–Thu). Room requests cannot be submitted during break.' });
+    if (start_time < '13:00' && end_time > '12:00') {
+      return res.status(400).json({ error: '12:00 PM to 01:00 PM is Lunch / Recess Break. Room requests cannot be submitted during break.' });
     }
     if (day_of_week === 'Friday' && start_time < '14:00' && end_time > '13:00') {
       return res.status(400).json({ error: '01:00 PM to 02:00 PM is Jummah Prayer Break on Friday. Room requests cannot be submitted during break.' });

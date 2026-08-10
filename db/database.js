@@ -33,8 +33,8 @@ const saveDb = () => {
 
 const isBreakOrWeekendSlot = (day, start, end) => {
   if (day === 'Saturday' || day === 'Sunday') return true;
-  // Mon-Thu Lunch/Recess Break (12:00 to 13:00)
-  if (day !== 'Friday' && start < '13:00' && end > '12:00') return true;
+  // Lunch/Recess Break (12:00 to 13:00) on Mon-Fri
+  if (start < '13:00' && end > '12:00') return true;
   // Friday Jummah Break (13:00 to 14:00)
   if (day === 'Friday' && start < '14:00' && end > '13:00') return true;
   return false;

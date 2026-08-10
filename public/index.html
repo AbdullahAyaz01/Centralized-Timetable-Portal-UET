@@ -112,7 +112,7 @@
             <a href="javascript:void(0)"><i class="fa-solid fa-calendar-days"></i> <span>Timetable</span></a>
           </li>
           <li class="nav-item" id="navImport" onclick="switchMainView('viewExcelImport', this)">
-            <a href="javascript:void(0)"><i class="fa-solid fa-file-excel"></i> <span>Excel Drag & Drop</span></a>
+            <a href="javascript:void(0)"><i class="fa-solid fa-file-excel"></i> <span>Upload Time Table</span></a>
           </li>
           <li class="nav-item" id="navRooms" onclick="switchMainView('viewRoomsManager', this)">
             <a href="javascript:void(0)"><i class="fa-solid fa-door-open"></i> <span>Rooms Manager</span></a>
@@ -183,16 +183,32 @@
             <div class="stat-card">
               <div class="stat-icon bg-green"><i class="fa-solid fa-building-columns"></i></div>
               <div class="stat-info">
-                <span class="stat-value" id="statDeptCount">5</span>
+                <span class="stat-value" id="statDeptCount">0</span>
                 <span class="stat-label">Departments</span>
               </div>
             </div>
 
             <div class="stat-card">
-              <div class="stat-icon bg-blue"><i class="fa-solid fa-door-closed"></i></div>
+              <div class="stat-icon bg-blue"><i class="fa-solid fa-chalkboard-user"></i></div>
               <div class="stat-info">
-                <span class="stat-value" id="statRoomCount">16</span>
-                <span class="stat-label">Classrooms & Labs</span>
+                <span class="stat-value" id="statClassroomCount">0</span>
+                <span class="stat-label">Classrooms</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon bg-orange"><i class="fa-solid fa-laptop-code"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statLabCount">0</span>
+                <span class="stat-label">Computer Labs</span>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon bg-green"><i class="fa-solid fa-video"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statProjectorCount">0</span>
+                <span class="stat-label">Projectors</span>
               </div>
             </div>
 
@@ -229,7 +245,7 @@
                     <i class="fa-solid fa-door-open"></i> Search Free / Vacant Rooms
                   </button>
                   <button class="btn btn-secondary btn-full" id="btnDashboardExcelImport" onclick="switchMainView('viewExcelImport', document.getElementById('navImport'))">
-                    <i class="fa-solid fa-file-excel"></i> Drag & Drop Excel Sheet Upload
+                    <i class="fa-solid fa-file-excel"></i> Upload Time Table Sheet
                   </button>
                   <button class="btn btn-accent btn-full" id="btnDashboardAddSlot" style="display: none;" onclick="openAddSlotModal()">
                     <i class="fa-solid fa-plus-circle"></i> Add Schedule Slot
@@ -358,7 +374,7 @@
           <div class="card glass-card">
             <div class="card-header border-b">
               <div>
-                <h2><i class="fa-solid fa-file-excel"></i> Drag & Drop Excel Timetable Importer</h2>
+                <h2><i class="fa-solid fa-file-excel"></i> Upload Time Table</h2>
                 <p class="text-muted">Upload your department's timetable spreadsheet (`.xlsx` or `.csv`) to automatically populate schedule slots into the database.</p>
               </div>
               <div>
