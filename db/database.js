@@ -175,8 +175,11 @@ const run = async (sql, params = []) => {
   }
 
   if (trimmed.startsWith('UPDATE ROOMS SET')) {
-    const name = params[params.length - 1];
-    const room = dbData.rooms.find(r => r.room_name === name);
+    const lastParam = params[params.length - 1];
+    let room = dbData.rooms.find(r => r.id === Number(lastParam));
+    if (!room) {
+      room = dbData.rooms.find(r => r.room_name === String(lastParam));
+    }
     if (room) {
       if (params.length >= 7) {
         const [deptId, capacity, chairs, roomType, proj, comps] = params;

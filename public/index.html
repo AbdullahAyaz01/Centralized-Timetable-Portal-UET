@@ -1,23 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UET KSK Centralized Timetable Portal</title>
-  <meta name="description" content="Official UET KSK Kala Shah Kaku Campus Centralized Multi-Department Timetable Management Portal.">
-  
+  <meta name="description"
+    content="Official UET KSK Kala Shah Kaku Campus Centralized Multi-Department Timetable Management Portal.">
+
   <!-- Fonts & FontAwesome Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+
   <!-- SheetJS CDN for Client-Side Excel Drag & Drop Parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
 
   <!-- PUBLIC EXECUTIVE LANDING PAGE (Appears when NO user is logged in) -->
@@ -44,8 +49,9 @@
         <i class="fa-solid fa-shield-halved"></i> Official Kala Shah Kaku Campus Academic Portal
       </div>
       <h1 class="hero-title">Centralized Multi-Department <span>Timetable System</span></h1>
-      <p class="hero-subtitle">Streamlined academic scheduling, real-time classroom allocation, and department-isolated coordinator management for UET KSK Campus.</p>
-      
+      <p class="hero-subtitle">Streamlined academic scheduling, real-time classroom allocation, and department-isolated
+        coordinator management for UET KSK Campus.</p>
+
       <button class="hero-cta-btn" onclick="openLoginModal()">
         <i class="fa-solid fa-right-to-bracket"></i> Access University Dashboard
       </button>
@@ -56,7 +62,8 @@
       <div class="feature-card">
         <div class="feature-icon-box icon-green"><i class="fa-solid fa-building-columns"></i></div>
         <h3>Centralized Master Schedule</h3>
-        <p>Real-time centralized matrix with automated schedule collision detection across all university academic blocks.</p>
+        <p>Real-time centralized matrix with automated schedule collision detection across all university academic
+          blocks.</p>
       </div>
 
       <div class="feature-card">
@@ -68,13 +75,15 @@
       <div class="feature-card">
         <div class="feature-icon-box icon-purple"><i class="fa-solid fa-shield-halved"></i></div>
         <h3>Department Isolation Guard</h3>
-        <p>Protected role-based security. Department coordinators edit their own schedules while preserving cross-department visibility.</p>
+        <p>Protected role-based security. Department coordinators edit their own schedules while preserving
+          cross-department visibility.</p>
       </div>
 
       <div class="feature-card">
         <div class="feature-icon-box icon-orange"><i class="fa-solid fa-file-excel"></i></div>
         <h3>Excel Drag & Drop Importer</h3>
-        <p>Import `.xlsx` timetable spreadsheets directly into room schedules with 1-click automatic preset data loader.</p>
+        <p>Import `.xlsx` timetable spreadsheets directly into room schedules with 1-click automatic preset data loader.
+        </p>
       </div>
     </div>
 
@@ -112,7 +121,7 @@
             <a href="javascript:void(0)"><i class="fa-solid fa-calendar-days"></i> <span>Timetable</span></a>
           </li>
           <li class="nav-item" id="navImport" onclick="switchMainView('viewExcelImport', this)">
-            <a href="javascript:void(0)"><i class="fa-solid fa-file-excel"></i> <span>Upload Time Table</span></a>
+            <a href="javascript:void(0)"><i class="fa-solid fa-file-excel"></i> <span>Update Room View</span></a>
           </li>
           <li class="nav-item" id="navRooms" onclick="switchMainView('viewRoomsManager', this)">
             <a href="javascript:void(0)"><i class="fa-solid fa-door-open"></i> <span>Rooms Manager</span></a>
@@ -123,7 +132,8 @@
               <span class="badge bg-purple" id="pendingRequestsBadge" style="display:none; margin-left: auto;">0</span>
             </a>
           </li>
-          <li class="nav-item" id="navAdminCreds" style="display: none;" onclick="switchMainView('viewAdminCreds', this)">
+          <li class="nav-item" id="navAdminCreds" style="display: none;"
+            onclick="switchMainView('viewAdminCreds', this)">
             <a href="javascript:void(0)"><i class="fa-solid fa-user-shield"></i> <span>Coordinator Passwords</span></a>
           </li>
           <li class="nav-item" id="navSettings" onclick="switchMainView('viewSettings', this)">
@@ -171,7 +181,8 @@
         <div class="alert-banner no-print" id="alertBanner">
           <div class="banner-content">
             <i class="fa-solid fa-shield-halved banner-icon"></i>
-            <span><strong>UET KSK Multi-Department Isolation:</strong> Logged-in coordinators can view all timetables, add rooms, and modify schedules for their own department.</span>
+            <span><strong>UET KSK Multi-Department Isolation:</strong> Logged-in coordinators can view all timetables,
+              add rooms, and modify schedules for their own department.</span>
           </div>
           <button class="btn-close-banner" onclick="this.parentElement.style.display='none'">&times;</button>
         </div>
@@ -244,10 +255,12 @@
                   <button class="btn btn-primary btn-full" onclick="openRoomFinderModal()">
                     <i class="fa-solid fa-door-open"></i> Search Free / Vacant Rooms
                   </button>
-                  <button class="btn btn-secondary btn-full" id="btnDashboardExcelImport" onclick="switchMainView('viewExcelImport', document.getElementById('navImport'))">
-                    <i class="fa-solid fa-file-excel"></i> Upload Time Table Sheet
+                  <button class="btn btn-secondary btn-full" id="btnDashboardExcelImport"
+                    onclick="switchMainView('viewExcelImport', document.getElementById('navImport'))">
+                    <i class="fa-solid fa-file-excel"></i> Update Room View Sheet
                   </button>
-                  <button class="btn btn-accent btn-full" id="btnDashboardAddSlot" style="display: none;" onclick="openAddSlotModal()">
+                  <button class="btn btn-accent btn-full" id="btnDashboardAddSlot" style="display: none;"
+                    onclick="openAddSlotModal()">
                     <i class="fa-solid fa-plus-circle"></i> Add Schedule Slot
                   </button>
                 </div>
@@ -262,10 +275,12 @@
             <div class="card-header border-b">
               <div>
                 <h2><i class="fa-solid fa-building-columns"></i> Departments & Room Allocation Tree</h2>
-                <p class="text-muted">Expand any department with [+] to see rooms (G-10, G-11, G-16, F-04, G-05, etc.) and click any room to inspect its weekly timetable.</p>
+                <p class="text-muted">Expand any department with [+] to see rooms (G-10, G-11, G-16, F-04, G-05, etc.)
+                  and click any room to inspect its weekly timetable.</p>
               </div>
               <div class="header-actions">
-                <button class="btn btn-accent" id="btnTreeAddDept" style="display: none;" onclick="openDeptManagementModal()">
+                <button class="btn btn-accent" id="btnTreeAddDept" style="display: none;"
+                  onclick="openDeptManagementModal()">
                   <i class="fa-solid fa-plus"></i> Add New Department
                 </button>
               </div>
@@ -332,9 +347,11 @@
               <button class="btn btn-secondary" onclick="window.print()">
                 <i class="fa-solid fa-print"></i> Print / PDF
               </button>
-              
+
               <!-- 1-Click Clear Entire Department Timetable Slots Button -->
-              <button class="btn btn-outline" id="btnClearDeptTimetable" style="display: none; color: var(--danger); border-color: var(--danger);" onclick="handleClearDeptTimetable()">
+              <button class="btn btn-outline" id="btnClearDeptTimetable"
+                style="display: none; color: var(--danger); border-color: var(--danger);"
+                onclick="handleClearDeptTimetable()">
                 <i class="fa-solid fa-eraser"></i> Clear Dept Timetable (1-Click)
               </button>
 
@@ -374,8 +391,9 @@
           <div class="card glass-card">
             <div class="card-header border-b">
               <div>
-                <h2><i class="fa-solid fa-file-excel"></i> Upload Time Table</h2>
-                <p class="text-muted">Upload your department's timetable spreadsheet (`.xlsx` or `.csv`) to automatically populate schedule slots into the database.</p>
+                <h2><i class="fa-solid fa-file-excel"></i> Update Room View</h2>
+                <p class="text-muted">Upload your department's room view spreadsheet (`.xlsx` or `.csv`) to
+                  automatically populate schedule slots into the database.</p>
               </div>
               <div>
                 <button class="btn btn-success" onclick="downloadExcelTemplate()">
@@ -384,13 +402,14 @@
               </div>
             </div>
             <div class="card-body">
-              
+
               <!-- Dropzone Container -->
               <div class="dropzone" id="excelDropzone">
                 <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
                 <h3>Drag & Drop your Department `.xlsx` File Here</h3>
                 <p>or click to browse and select file from your computer</p>
-                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleFileSelect(event)">
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;"
+                  onchange="handleFileSelect(event)">
                 <div class="d-flex align-items-center justify-content-center gap-3 mt-3">
                   <button class="btn btn-primary" onclick="document.getElementById('excelFileInput').click()">
                     <i class="fa-solid fa-folder-open"></i> Browse Excel File
@@ -404,7 +423,8 @@
               <!-- Quick Preset Importer for dashboard.xlsx -->
               <div class="preset-import-box mt-4">
                 <h4><i class="fa-solid fa-database"></i> Pre-Loaded Campus Dummy Data (`dashboard.xlsx`)</h4>
-                <p>Click below to automatically read and parse the campus `dashboard.xlsx` dummy dataset into your active department schedule.</p>
+                <p>Click below to automatically read and parse the campus `dashboard.xlsx` dummy dataset into your
+                  active department schedule.</p>
                 <button class="btn btn-accent mt-2" onclick="importPresetDashboardXlsx()">
                   <i class="fa-solid fa-bolt"></i> Auto-Import `dashboard.xlsx` File Data
                 </button>
@@ -421,7 +441,8 @@
             <div class="card-header border-b">
               <div>
                 <h2><i class="fa-solid fa-door-open"></i> Department Rooms & Labs Dashboard</h2>
-                <p class="text-muted">Manage classrooms, capacity (chairs count), projector setup, and computer labs for your department.</p>
+                <p class="text-muted">Manage classrooms, capacity (chairs count), projector setup, and computer labs for
+                  your department.</p>
               </div>
               <button class="btn btn-primary" id="btnAddRoom" onclick="openAddRoomModal()">
                 <i class="fa-solid fa-plus"></i> Add New Room
@@ -441,7 +462,8 @@
             <div class="card-header border-b">
               <div>
                 <h2><i class="fa-solid fa-user-shield"></i> Master Department Coordinator Credentials</h2>
-                <p class="text-muted">Super Admin dashboard to create departments, assign department heads, and manage login credentials.</p>
+                <p class="text-muted">Super Admin dashboard to create departments, assign department heads, and manage
+                  login credentials.</p>
               </div>
               <button class="btn btn-accent" onclick="openDeptManagementModal()">
                 <i class="fa-solid fa-building-circle-check"></i> + Add Dept & Coordinator
@@ -461,7 +483,8 @@
             <div class="card-header border-b">
               <div>
                 <h2><i class="fa-solid fa-paper-plane"></i> Cross-Department Room Allocation Requests</h2>
-                <p class="text-muted">Request vacant classrooms & labs owned by other departments for your class, or approve incoming requests for your department's rooms.</p>
+                <p class="text-muted">Request vacant classrooms & labs owned by other departments for your class, or
+                  approve incoming requests for your department's rooms.</p>
               </div>
               <div>
                 <button class="btn btn-primary" id="btnOpenRequestModal" onclick="openRoomRequestModal()">
@@ -472,13 +495,16 @@
             <div class="card-body">
               <div class="d-flex gap-2 mb-4 border-b pb-2 flex-wrap">
                 <button class="btn btn-outline active" id="tabIncomingReqs" onclick="switchRequestTab('incoming')">
-                  <i class="fa-solid fa-inbox"></i> Incoming Requests for My Rooms <span class="badge bg-purple" id="tabIncomingBadge">0</span>
+                  <i class="fa-solid fa-inbox"></i> Incoming Requests for My Rooms <span class="badge bg-purple"
+                    id="tabIncomingBadge">0</span>
                 </button>
                 <button class="btn btn-outline" id="tabOutgoingReqs" onclick="switchRequestTab('outgoing')">
-                  <i class="fa-solid fa-paper-plane"></i> My Sent Requests <span class="badge badge-default" id="tabOutgoingBadge">0</span>
+                  <i class="fa-solid fa-paper-plane"></i> My Sent Requests <span class="badge badge-default"
+                    id="tabOutgoingBadge">0</span>
                 </button>
                 <button class="btn btn-outline" id="tabAllReqs" onclick="switchRequestTab('all')">
-                  <i class="fa-solid fa-list-check"></i> All Department Requests <span class="badge badge-default" id="tabAllBadge">0</span>
+                  <i class="fa-solid fa-list-check"></i> All Department Requests <span class="badge badge-default"
+                    id="tabAllBadge">0</span>
                 </button>
               </div>
 
@@ -518,7 +544,8 @@
 
                   <div class="form-group">
                     <label>Role & Department</label>
-                    <input type="text" id="settingRoleDept" readonly disabled style="background: #f1f5f9; cursor: not-allowed; font-weight:600;">
+                    <input type="text" id="settingRoleDept" readonly disabled
+                      style="background: #f1f5f9; cursor: not-allowed; font-weight:600;">
                   </div>
                 </div>
 
@@ -527,7 +554,8 @@
                 <h4><i class="fa-solid fa-lock"></i> Security & Authorization</h4>
                 <div class="form-grid mt-2">
                   <div class="form-group">
-                    <label>Current Password <span class="req">*</span> <small class="text-muted">(Required to save changes)</small></label>
+                    <label>Current Password <span class="req">*</span> <small class="text-muted">(Required to save
+                        changes)</small></label>
                     <input type="password" id="settingCurrentPassword" placeholder="••••••••" required>
                   </div>
 
@@ -537,11 +565,13 @@
                   </div>
                 </div>
 
-                <div id="settingsSuccess" class="alert-banner mt-2" style="display: none; background: #f0fdf4; border-color: #bbf7d0; color: #15803d;"></div>
+                <div id="settingsSuccess" class="alert-banner mt-2"
+                  style="display: none; background: #f0fdf4; border-color: #bbf7d0; color: #15803d;"></div>
                 <div id="settingsError" class="form-error mt-2" style="display: none;"></div>
 
                 <div class="modal-footer mt-3" style="position: static; margin: 20px 0 0 0; padding-right: 0;">
-                  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+                  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save
+                    Settings</button>
                 </div>
               </form>
             </div>
@@ -577,8 +607,10 @@
           <h4><i class="fa-solid fa-key"></i> Quick Demo Logins:</h4>
           <div class="demo-chips">
             <button class="chip" onclick="fillLogin('admin', 'admin123')">🔑 Super Admin (admin / admin123)</button>
-            <button class="chip" onclick="fillLogin('cs_admin', 'cs123')">💻 CS Dept Coordinator (cs_admin / cs123)</button>
-            <button class="chip" onclick="fillLogin('ee_admin', 'ee123')">⚡ EE Dept Coordinator (ee_admin / ee123)</button>
+            <button class="chip" onclick="fillLogin('cs_admin', 'cs123')">💻 CS Dept Coordinator (cs_admin /
+              cs123)</button>
+            <button class="chip" onclick="fillLogin('ee_admin', 'ee123')">⚡ EE Dept Coordinator (ee_admin /
+              ee123)</button>
           </div>
         </div>
       </div>
@@ -595,7 +627,7 @@
       <div class="modal-body">
         <form id="slotForm" onsubmit="handleSaveSlot(event)">
           <input type="hidden" id="slotId">
-          
+
           <div class="form-grid">
             <div class="form-group">
               <label>Department <span class="req">*</span></label>
@@ -603,8 +635,10 @@
             </div>
 
             <div class="form-group">
-              <label>Course Name <span class="req">*</span> <small class="text-muted">(Select or Type New)</small></label>
-              <input type="text" id="slotCourse" list="slotCourseDatalist" placeholder="e.g. Programming Fundamentals" required autocomplete="off">
+              <label>Course Name <span class="req">*</span> <small class="text-muted">(Select or Type
+                  New)</small></label>
+              <input type="text" id="slotCourse" list="slotCourseDatalist" placeholder="e.g. Programming Fundamentals"
+                required autocomplete="off">
               <datalist id="slotCourseDatalist"></datalist>
             </div>
 
@@ -727,7 +761,8 @@
             </div>
             <div class="form-group">
               <label>Badge Color <span class="req">*</span></label>
-              <input type="color" id="newDeptColor" value="#006633" style="width: 100%; height: 40px; border:none; cursor:pointer;" required>
+              <input type="color" id="newDeptColor" value="#006633"
+                style="width: 100%; height: 40px; border:none; cursor:pointer;" required>
             </div>
           </div>
 
@@ -762,15 +797,17 @@
     </div>
   </div>
 
-  <!-- Add Room Modal -->
+  <!-- Add/Edit Room Modal -->
   <div class="modal" id="addRoomModal">
     <div class="modal-content glass-card">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-door-plus"></i> Add New Room / Lab</h3>
+        <h3 id="addRoomModalTitle"><i class="fa-solid fa-door-plus"></i> Add New Room / Lab</h3>
         <button class="modal-close" onclick="closeAddRoomModal()">&times;</button>
       </div>
       <div class="modal-body">
         <form id="addRoomForm" onsubmit="handleCreateRoom(event)">
+          <input type="hidden" id="editRoomId">
+
           <div class="form-group">
             <label>Target Department <span class="req">*</span></label>
             <select id="roomDept" required></select>
@@ -790,7 +827,7 @@
               <option value="Computer Lab">Computer Lab</option>
             </select>
           </div>
-          
+
           <!-- Conditional Field: Shown ONLY when Room Type is Computer Lab -->
           <div class="form-group" id="computersGroup" style="display: none;">
             <label>Number of Computers <span class="req">*</span></label>
@@ -804,8 +841,8 @@
               <option value="0">No</option>
             </select>
           </div>
-          
-          <button type="submit" class="btn btn-primary btn-full mt-3">Add Room</button>
+
+          <button type="submit" id="addRoomSubmitBtn" class="btn btn-primary btn-full mt-3">Add Room</button>
         </form>
       </div>
     </div>
@@ -898,4 +935,5 @@
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

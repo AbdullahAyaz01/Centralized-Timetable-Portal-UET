@@ -49,6 +49,42 @@ router.post('/', isAuthenticated, async (req, res) => {
   }
 });
 
+// PUT /api/rooms/:id - Update room details (Dept Coordinator can only edit rooms belonging to their department)
+router.put('/:id', isAuthenticated, async (req, res) => {
+  try {
+    const roomId = Number(req.params.id);
+    const room = await get('SELECT * FROM rooms WHERE id = ?', [roomId]);
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found.' });
+    }
+
+    const { room_name, building, capacity, room_type, department_id, chairs_count, projector, computers_count } = req.body;
+
+    if (!room_name) {
+      return res.status(400).json({ error: 'Room name is required.' });
+    }
+
+    // Permission Check: Dept Admin can only edit rooms belonging to their OWN department!
+    if (req.session.user.role === 'dept_admin' && Number(req.session.user.department_id) !== Number(room.department_id)) {
+      return res.status(403).json({ error: 'Forbidden. You can only edit rooms belonging to your own department!' });
+    }
+
+    const targetDeptId = department_id || room.department_id;
+    const finalChairs = Number(chairs_count) || Number(capacity) || room.capacity;
+    const finalProjector = projector === 'Yes' || projector === 1 || projector === '1' ? 1 : 0;
+    const finalComputers = Number(computers_count) || (room_type === 'Computer Lab' ? 40 : 0);
+
+    await run(
+      'UPDATE ROOMS SET department_id = ?, capacity = ?, chairs_count = ?, room_type = ?, projector = ?, computers_count = ? WHERE id = ?',
+      [targetDeptId, finalChairs, finalChairs, room_type || room.room_type, finalProjector, finalComputers, roomId]
+    );
+
+    res.json({ message: `Room "${room_name}" updated successfully.` });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update room: ' + err.message });
+  }
+});
+
 // DELETE /api/rooms/:id - Delete room (Dept Admin can only delete rooms from their own dept)
 router.delete('/:id', isAuthenticated, async (req, res) => {
   try {

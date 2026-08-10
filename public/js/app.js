@@ -203,7 +203,10 @@ function renderDeptTree() {
                 <span>${compInfo}</span>
               </div>
               ${canEditDept ? `
-                <button class="btn-icon btn-icon-danger ml-2" title="Delete Room" onclick="event.stopPropagation(); handleDeleteRoom(${r.id}, '${r.room_name}')">
+                <button class="btn-icon btn-icon-primary ml-2" title="Edit Room Details" onclick="event.stopPropagation(); openEditRoomModal(${r.id})">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="btn-icon btn-icon-danger ml-1" title="Delete Room" onclick="event.stopPropagation(); handleDeleteRoom(${r.id}, '${r.room_name}')">
                   <i class="fa-solid fa-trash"></i>
                 </button>
               ` : ''}
@@ -265,7 +268,10 @@ function renderDeptTree() {
                 <span>${compInfo}</span>
               </div>
               ${canEditDept ? `
-                <button class="btn-icon btn-icon-danger ml-2" title="Delete Room" onclick="event.stopPropagation(); handleDeleteRoom(${r.id}, '${r.room_name}')">
+                <button class="btn-icon btn-icon-primary ml-2" title="Edit Room Details" onclick="event.stopPropagation(); openEditRoomModal(${r.id})">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="btn-icon btn-icon-danger ml-1" title="Delete Room" onclick="event.stopPropagation(); handleDeleteRoom(${r.id}, '${r.room_name}')">
                   <i class="fa-solid fa-trash"></i>
                 </button>
               ` : ''}
@@ -795,7 +801,10 @@ function renderRoomsManager() {
           ${isLab ? `<div>Computers: <strong>💻 ${r.computers_count || 40} PCs</strong></div>` : ''}
         </div>
         ${canEditRoom ? `
-          <div class="mt-3 pt-2 border-top">
+          <div class="mt-3 pt-2 border-top d-flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="openEditRoomModal(${r.id})">
+              <i class="fa-solid fa-pen-to-square"></i> Edit Room
+            </button>
             <button class="btn btn-outline btn-sm text-danger" onclick="handleDeleteRoom(${r.id}, '${r.room_name}')">
               <i class="fa-solid fa-trash"></i> Delete Room
             </button>
@@ -868,6 +877,17 @@ function onRoomTypeChange() {
 
 // Add Room Modal (LOCKED to Coordinator's Department)
 function openAddRoomModal() {
+  const modalTitle = document.getElementById('addRoomModalTitle');
+  const submitBtn = document.getElementById('addRoomSubmitBtn');
+  const editIdInput = document.getElementById('editRoomId');
+
+  if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-door-plus"></i> Add New Room / Lab`;
+  if (submitBtn) submitBtn.textContent = 'Add Room';
+  if (editIdInput) editIdInput.value = '';
+
+  const form = document.getElementById('addRoomForm');
+  if (form) form.reset();
+
   const deptSel = document.getElementById('roomDept');
   if (deptSel) {
     if (currentUser && currentUser.role === 'dept_admin') {
@@ -883,13 +903,47 @@ function openAddRoomModal() {
   openModal('addRoomModal');
 }
 
+function openEditRoomModal(roomId) {
+  const room = masterRooms.find(r => Number(r.id) === Number(roomId));
+  if (!room) return;
+
+  const modalTitle = document.getElementById('addRoomModalTitle');
+  const submitBtn = document.getElementById('addRoomSubmitBtn');
+  const editIdInput = document.getElementById('editRoomId');
+
+  if (modalTitle) modalTitle.innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Edit Room / Lab Details`;
+  if (submitBtn) submitBtn.textContent = 'Update Room Details';
+  if (editIdInput) editIdInput.value = room.id;
+
+  const deptSel = document.getElementById('roomDept');
+  if (deptSel) {
+    if (currentUser && currentUser.role === 'dept_admin') {
+      deptSel.innerHTML = `<option value="${currentUser.department_id}">${currentUser.department_name} (${currentUser.department_code})</option>`;
+      deptSel.disabled = true;
+    } else {
+      deptSel.disabled = false;
+      deptSel.innerHTML = masterDepartments.map(d => `<option value="${d.id}" ${d.id == room.department_id ? 'selected' : ''}>${d.name} (${d.code})</option>`).join('');
+    }
+  }
+
+  document.getElementById('roomName').value = room.room_name;
+  document.getElementById('roomCapacity').value = room.capacity || room.chairs_count || 50;
+  document.getElementById('roomType').value = room.room_type || 'Lecture Hall';
+  document.getElementById('roomProjector').value = room.projector ? '1' : '0';
+  document.getElementById('roomComputers').value = room.computers_count || 40;
+
+  onRoomTypeChange();
+  openModal('addRoomModal');
+}
+
 function closeAddRoomModal() {
   closeModal('addRoomModal');
 }
 
 async function handleCreateRoom(e) {
   e.preventDefault();
-  const room_name = document.getElementById('roomName').value;
+  const roomId = document.getElementById('editRoomId').value;
+  const room_name = document.getElementById('roomName').value.trim();
   const capacity = document.getElementById('roomCapacity').value;
   const room_type = document.getElementById('roomType').value;
   const projector = document.getElementById('roomProjector').value;
@@ -901,24 +955,28 @@ async function handleCreateRoom(e) {
   
   const department_id = document.getElementById('roomDept').value || (currentUser ? currentUser.department_id : null);
 
+  const url = roomId ? `/api/rooms/${roomId}` : '/api/rooms';
+  const method = roomId ? 'PUT' : 'POST';
+
   try {
-    const res = await fetch('/api/rooms', {
-      method: 'POST',
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ room_name, building: 'Main Academic Block', capacity, room_type, projector, computers_count, department_id })
     });
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Failed to add room.');
+      alert(data.error || 'Failed to save room.');
       return;
     }
 
     closeAddRoomModal();
     await loadMasterData();
     renderRoomsManager();
+    renderDeptTree();
   } catch (err) {
-    alert('Error creating room.');
+    alert('Error saving room.');
   }
 }
 
