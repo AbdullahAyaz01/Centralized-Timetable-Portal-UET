@@ -42,6 +42,164 @@ const parseTimeHeader = (headerStr) => {
   return null;
 };
 
+// Helper to parse course name, section, and semester from Excel cell content (Pattern: "Course Name | Sem 1-A")
+const parseCellDetails = async (cellVal, deptId, deptCode, defaultCourseId) => {
+  if (cellVal === undefined || cellVal === null || cellVal === 0 || cellVal === '0') return null;
+
+  const strVal = String(cellVal).trim();
+  if (!strVal || strVal.toLowerCase() === 'no' || strVal.toLowerCase() === 'false' || strVal.toLowerCase().includes('break')) return null;
+
+  let courseName = 'Department Academic Course';
+  let section = 'A';
+  let semester = 1;
+  let isDetailed = false;
+
+  if (strVal !== '1' && strVal.toLowerCase() !== 'yes' && strVal.toLowerCase() !== 'true') {
+    isDetailed = true;
+
+    // Split cell text by '|', ';', or ',' to extract Course Name
+    const parts = strVal.split(/[|;,]/).map(p => p.trim());
+    courseName = parts[0] || 'Academic Course';
+
+    // Remove course code prefix if present, e.g. "CS-101 | Programming Fundamentals"
+    if (courseName.match(/^[A-Z]{2,4}-\d{3}/i)) {
+      const codeMatch = courseName.match(/^[A-Z]{2,4}-\d{3}/i);
+      const rest = courseName.substring(codeMatch[0].length).replace(/^[\s:-]+/, '').trim();
+      if (rest) courseName = rest;
+    }
+
+    // Extract Semester and Section (e.g. "Sem 1-A", "Sem: 1-A", "Sem 1A")
+    const semSecMatch = strVal.match(/sem(?:ester)?[\s:-]*([1-8])\s*[-:\s]*([A-Z0-9]+)?/i);
+    if (semSecMatch) {
+      semester = parseInt(semSecMatch[1]);
+      if (semSecMatch[2]) {
+        let rawSec = semSecMatch[2].toUpperCase();
+        rawSec = rawSec.replace(/^(CS|EE|ME|CE|MGT|IT|SE)-?/i, '').replace(/^[0-9]+-?/, '').trim() || rawSec;
+        section = rawSec;
+      }
+    } else {
+      const semOnly = strVal.match(/sem(?:ester)?[\s:-]*([1-8])/i);
+      if (semOnly) semester = parseInt(semOnly[1]);
+
+      const secOnly = strVal.match(/(?:sec(?:tion)?[\s:-]*|\b)([A-Z0-9]{1,4})\b/i);
+      if (secOnly) {
+        let rawSec = secOnly[1].toUpperCase();
+        rawSec = rawSec.replace(/^(CS|EE|ME|CE|MGT|IT|SE)-?/i, '').replace(/^[0-9]+-?/, '').trim() || rawSec;
+        section = rawSec;
+      }
+    }
+  }
+
+  // Check database for existing course under this department or create it dynamically
+  let course = await get(
+    'SELECT * FROM courses WHERE department_id = ? AND (LOWER(course_name) = LOWER(?) OR LOWER(course_code) = LOWER(?))',
+    [deptId, courseName, courseName]
+  );
+  
+  if (!course) {
+    course = await get('SELECT * FROM courses WHERE LOWER(course_name) = LOWER(?)', [courseName]);
+  }
+
+  let finalCourseId = defaultCourseId;
+
+  if (course) {
+    finalCourseId = course.id;
+  } else if (isDetailed) {
+    const codeGen = `${deptCode || 'CS'}-${courseName.substring(0, 3).toUpperCase()}`;
+    const newCourseRes = await run(
+      'INSERT INTO courses (course_code, course_name, department_id, credit_hours, semester) VALUES (?, ?, ?, ?, ?)',
+      [codeGen, courseName, deptId, 3, semester]
+    );
+    finalCourseId = newCourseRes.id;
+  }
+
+  return {
+    courseId: finalCourseId,
+    section: `${semester}-${section}`,
+    semester
+  };
+};
+
+// GET /api/upload/template - Download sample pattern Excel template (.xlsx)
+router.get('/template', (req, res) => {
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Room Specs
+    const roomSpecsData = [
+      ["Room No.", "No. of Chairs", "Projector (Yes or No)", "No. of Computers"],
+      ["G-10", 50, "Yes", 0],
+      ["G-11", 50, "No", 0],
+      ["F-04", 60, "Yes", 0],
+      ["Labs", "", "", ""],
+      ["G-05", 40, "Yes", 40],
+      ["G-16", 40, "Yes", 40]
+    ];
+    const roomSpecsSheet = XLSX.utils.aoa_to_sheet(roomSpecsData);
+    XLSX.utils.book_append_sheet(wb, roomSpecsSheet, "Room Specs");
+
+    // Sheet 2: Matrix for G-10 (Lecture Hall)
+    const g10Data = [
+      ["Day / Time", "8-9 AM", "9-10 AM", "10-11 AM", "11-12 AM", "12-1 PM (Break)", "1-2 PM", "2-3 PM", "3-4 PM"],
+      ["Monday", "Programming Fundamentals | Sem 1-A", 0, "Digital Logic Design | Sem 1-A", 0, "Lunch Break", "Linear Algebra | Sem 1-A", 0, 0],
+      ["Tuesday", 0, "Data Structures | Sem 3-A", 0, "Object Oriented Prog | Sem 3-A", 0, "Circuit Analysis | Sem 3-A", 0, 0],
+      ["Wednesday", "Database Systems | Sem 5-A", 0, "Operating Systems | Sem 5-A", 0, "Lunch Break", "Computer Networks | Sem 5-A", 0, 0],
+      ["Thursday", 0, "Software Engineering | Sem 7-A", 0, "Artificial Intelligence | Sem 7-A", 0, "Compiler Construction | Sem 7-A", 0, 0],
+      ["Friday", "Programming Fundamentals | Sem 1-B", 0, 0, 0, "Programming Fundamentals | Sem 1-B", "Jummah Break", 0, 0]
+    ];
+    const g10Sheet = XLSX.utils.aoa_to_sheet(g10Data);
+    XLSX.utils.book_append_sheet(wb, g10Sheet, "G-10");
+
+    // Sheet 3: Matrix for G-05 (Computer Lab)
+    const g05Data = [
+      ["Day / Time", "8-9 AM", "9-10 AM", "10-11 AM", "11-12 AM", "12-1 PM (Break)", "1-2 PM", "2-3 PM", "3-4 PM"],
+      ["Monday", "Programming Fundamentals Lab | Sem 1-A", "Programming Fundamentals Lab | Sem 1-A", 0, 0, "Lunch Break", "Data Structures Lab | Sem 3-A", "Data Structures Lab | Sem 3-A", 0],
+      ["Tuesday", 0, 0, "Database Systems Lab | Sem 5-A", "Database Systems Lab | Sem 5-A", 0, 0, 0, 0],
+      ["Wednesday", "Programming Fundamentals Lab | Sem 1-B", "Programming Fundamentals Lab | Sem 1-B", 0, 0, "Lunch Break", 0, 0, 0],
+      ["Thursday", 0, 0, "Artificial Intelligence Lab | Sem 7-A", "Artificial Intelligence Lab | Sem 7-A", 0, 0, 0, 0],
+      ["Friday", 0, 0, 0, 0, 0, "Jummah Break", 0, 0]
+    ];
+    const g05Sheet = XLSX.utils.aoa_to_sheet(g05Data);
+    XLSX.utils.book_append_sheet(wb, g05Sheet, "G-05");
+
+    // Sheet 4: Pattern Guide
+    const guideData = [
+      ["UET KSK Timetable Excel Pattern Guide"],
+      [""],
+      ["Sheet 1: Room Specifications (First Sheet)"],
+      ["- Column 1: Room No (e.g. G-10, G-11, F-04, G-05)"],
+      ["- Column 2: No. of Chairs (e.g. 50, 60, 40)"],
+      ["- Column 3: Projector Available ('Yes' or 'No')"],
+      ["- Column 4: No. of Computers (For Labs, e.g. 40; for lecture halls set 0 or leave blank)"],
+      ["- Note: Use 'Labs' in Column 1 to start the computer labs section."],
+      [""],
+      ["Sheets 2+: Room Timetable Matrix (One sheet per room name, e.g. 'G-10', 'G-05')"],
+      ["- Header Row (Row 1): 'Day / Time', '8-9 AM', '9-10 AM', '10-11 AM', '11-12 AM', '12-1 PM', '1-2 PM', '2-3 PM', '3-4 PM'"],
+      ["- Column 1 (Days): Monday, Tuesday, Wednesday, Thursday, Friday"],
+      ["- Cell Format: Enter lecture details in cell format: Course Name | Sem [Semester]-[Section]"],
+      ["  Example 1: Programming Fundamentals | Sem 1-A"],
+      ["  Example 2: Data Structures | Sem 3-B"],
+      ["- (Note: Enter 1 or 'Yes' if you want default course & section assigned)"],
+      [""],
+      ["After filling out this template, upload the file in the UET KSK Timetable Portal!"]
+    ];
+    const guideSheet = XLSX.utils.aoa_to_sheet(guideData);
+    XLSX.utils.book_append_sheet(wb, guideSheet, "Pattern Guide");
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="UET_KSK_Timetable_Pattern_Template.xlsx"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return res.send(buffer);
+  } catch (err) {
+    console.error('Error generating template:', err);
+    res.status(500).json({ error: 'Failed to generate Excel template: ' + err.message });
+  }
+});
+
 // POST /api/upload/excel - Parse and import Excel timetable sheet (Dept Coordinator ONLY)
 router.post('/excel', isAuthenticated, upload.single('file'), async (req, res) => {
   try {
@@ -50,6 +208,9 @@ router.post('/excel', isAuthenticated, upload.single('file'), async (req, res) =
     }
 
     const deptId = Number(req.body.department_id || req.session.user.department_id || 1);
+
+    const deptObj = await get('SELECT * FROM departments WHERE id = ?', [deptId]);
+    const deptCode = deptObj ? deptObj.code : 'CS';
 
     let workbook;
 
@@ -160,7 +321,7 @@ router.post('/excel', isAuthenticated, upload.single('file'), async (req, res) =
         }
       }
 
-      const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
       for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
@@ -171,35 +332,47 @@ router.post('/excel', isAuthenticated, upload.single('file'), async (req, res) =
 
         for (const slotInfo of slotMap) {
           const cellVal = row[slotInfo.colIndex];
-          if (cellVal === 1 || cellVal === '1' || String(cellVal).trim().toLowerCase() === 'yes') {
-            
-            const conflict = await isRoomOccupied(targetRoom.id, dayName, slotInfo.start, slotInfo.end);
-            if (conflict) {
-              conflictCount++;
-              conflictMessages.push(`Room "${targetRoom.room_name}" is ALREADY occupied on ${dayName} (${slotInfo.start}-${slotInfo.end}). Skipped duplicate slot.`);
-              continue;
-            }
+          if (!cellVal || cellVal === 0 || cellVal === '0') continue;
 
-            await run(
-              `INSERT INTO timetable_entries 
-               (department_id, course_id, instructor_id, room_id, day_of_week, start_time, end_time, section, semester, session_type, notes) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                deptId,
-                defaultCourseId,
-                defaultInstId,
-                targetRoom.id,
-                dayName,
-                slotInfo.start,
-                slotInfo.end,
-                'CS-1A',
-                1,
-                targetRoom.room_type === 'Computer Lab' ? 'Lab' : 'Lecture',
-                `Imported from sheet ${sheetName}`
-              ]
-            );
-            importedCount++;
+          // Skip slots overlapping designated breaks
+          const isLunchBreak = (dayName !== 'Friday' && slotInfo.start < '13:00' && slotInfo.end > '12:00');
+          const isJummahBreak = (dayName === 'Friday' && slotInfo.start < '14:00' && slotInfo.end > '13:00');
+
+          if (isLunchBreak || isJummahBreak) {
+            conflictCount++;
+            conflictMessages.push(`Skipped slot on ${dayName} (${slotInfo.start}-${slotInfo.end}) as it overlaps with university break time.`);
+            continue;
           }
+
+          const parsedDetails = await parseCellDetails(cellVal, deptId, deptCode, defaultCourseId);
+          if (!parsedDetails) continue;
+
+          const conflict = await isRoomOccupied(targetRoom.id, dayName, slotInfo.start, slotInfo.end);
+          if (conflict) {
+            conflictCount++;
+            conflictMessages.push(`Room "${targetRoom.room_name}" is ALREADY occupied on ${dayName} (${slotInfo.start}-${slotInfo.end}). Skipped duplicate slot.`);
+            continue;
+          }
+
+          await run(
+            `INSERT INTO timetable_entries 
+             (department_id, course_id, instructor_id, room_id, day_of_week, start_time, end_time, section, semester, session_type, notes) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              deptId,
+              parsedDetails.courseId,
+              defaultInstId,
+              targetRoom.id,
+              dayName,
+              slotInfo.start,
+              slotInfo.end,
+              parsedDetails.section,
+              parsedDetails.semester,
+              targetRoom.room_type === 'Computer Lab' ? 'Lab' : 'Lecture',
+              `Imported from sheet ${sheetName}`
+            ]
+          );
+          importedCount++;
         }
       }
     }

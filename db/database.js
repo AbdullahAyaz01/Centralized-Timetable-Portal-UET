@@ -11,13 +11,15 @@ let dbData = {
   courses: [],
   instructors: [],
   timetable_entries: [],
+  room_requests: [],
   counters: {
     departments: 0,
     users: 0,
     rooms: 0,
     courses: 0,
     instructors: 0,
-    timetable_entries: 0
+    timetable_entries: 0,
+    room_requests: 0
   }
 };
 
@@ -29,11 +31,40 @@ const saveDb = () => {
   }
 };
 
+const isBreakOrWeekendSlot = (day, start, end) => {
+  if (day === 'Saturday' || day === 'Sunday') return true;
+  // Mon-Thu Lunch/Recess Break (12:00 to 13:00)
+  if (day !== 'Friday' && start < '13:00' && end > '12:00') return true;
+  // Friday Jummah Break (13:00 to 14:00)
+  if (day === 'Friday' && start < '14:00' && end > '13:00') return true;
+  return false;
+};
+
 const loadDb = () => {
   if (fs.existsSync(dbFilePath)) {
     try {
       const raw = fs.readFileSync(dbFilePath, 'utf8');
       dbData = JSON.parse(raw);
+      if (!dbData.room_requests) dbData.room_requests = [];
+      if (!dbData.counters) dbData.counters = {};
+      if (!dbData.counters.room_requests) dbData.counters.room_requests = dbData.room_requests.length;
+
+      // Purge non-compliant slots (weekend or break time overlaps)
+      const initEntriesLen = dbData.timetable_entries ? dbData.timetable_entries.length : 0;
+      const initReqsLen = dbData.room_requests ? dbData.room_requests.length : 0;
+
+      if (dbData.timetable_entries) {
+        dbData.timetable_entries = dbData.timetable_entries.filter(e => !isBreakOrWeekendSlot(e.day_of_week, e.start_time, e.end_time));
+      }
+      if (dbData.room_requests) {
+        dbData.room_requests = dbData.room_requests.filter(r => !isBreakOrWeekendSlot(r.day_of_week, r.start_time, r.end_time));
+      }
+
+      if ((dbData.timetable_entries && dbData.timetable_entries.length !== initEntriesLen) || 
+          (dbData.room_requests && dbData.room_requests.length !== initReqsLen)) {
+        saveDb();
+        console.log(`Cleaned up non-compliant timetable slots/requests from database.`);
+      }
     } catch (err) {
       console.error('Error reading database file, starting fresh:', err);
     }
@@ -101,6 +132,26 @@ const run = async (sql, params = []) => {
     dbData.users.push(newUser);
     saveDb();
     return { id: newUser.id, changes: 1 };
+  }
+
+  if (trimmed.startsWith('UPDATE USERS SET')) {
+    const [full_name, email, username, password_hash, userId] = params;
+    const user = dbData.users.find(u => u.id === Number(userId));
+    if (user) {
+      if (username && username !== user.username) {
+        if (dbData.users.some(u => u.id !== user.id && u.username === username)) {
+          throw new Error('Username already exists. Please choose a different username.');
+        }
+      }
+      if (full_name) user.full_name = full_name;
+      if (email !== undefined) user.email = email;
+      if (username) user.username = username;
+      if (password_hash) user.password_hash = password_hash;
+      user.updated_at = new Date().toISOString();
+      saveDb();
+      return { id: user.id, changes: 1 };
+    }
+    return { id: userId, changes: 0 };
   }
 
   if (trimmed.startsWith('INSERT INTO ROOMS')) {
@@ -257,12 +308,92 @@ const run = async (sql, params = []) => {
     return { changes: initialLen - dbData.timetable_entries.length };
   }
 
+  if (trimmed.startsWith('INSERT INTO ROOM_REQUESTS')) {
+    const [requesting_dept_id, owning_dept_id, room_id, day_of_week, start_time, end_time, course_code, course_name, section, semester, notes] = params;
+    dbData.counters.room_requests++;
+    const newReq = {
+      id: dbData.counters.room_requests,
+      requesting_department_id: Number(requesting_dept_id),
+      owning_department_id: Number(owning_dept_id),
+      room_id: Number(room_id),
+      day_of_week,
+      start_time,
+      end_time,
+      course_code: course_code ? course_code.toUpperCase() : 'REQ-101',
+      course_name: course_name || 'Requested Lecture',
+      section: section ? section.toUpperCase() : 'SEC-1',
+      semester: Number(semester) || 1,
+      notes: notes || '',
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    dbData.room_requests.push(newReq);
+    saveDb();
+    return { id: newReq.id, changes: 1 };
+  }
+
+  if (trimmed.startsWith('UPDATE ROOM_REQUESTS SET STATUS = ?')) {
+    const [status, reqId] = params;
+    const reqItem = dbData.room_requests.find(r => r.id === Number(reqId));
+    if (reqItem) {
+      reqItem.status = status;
+      reqItem.updated_at = new Date().toISOString();
+      saveDb();
+      return { id: reqId, changes: 1 };
+    }
+    return { id: reqId, changes: 0 };
+  }
+
+  if (trimmed.startsWith('DELETE FROM ROOM_REQUESTS')) {
+    const reqId = Number(params[0]);
+    const initialLen = dbData.room_requests.length;
+    dbData.room_requests = dbData.room_requests.filter(r => Number(r.id) !== reqId);
+    saveDb();
+    return { changes: initialLen - dbData.room_requests.length };
+  }
+
   return { id: 0, changes: 0 };
 };
 
 const query = async (sql, params = []) => {
   loadDb();
   const trimmed = sql.trim().toUpperCase();
+
+  if (trimmed.includes('FROM ROOM_REQUESTS')) {
+    let list = dbData.room_requests.map(req => {
+      const rDept = dbData.departments.find(d => Number(d.id) === Number(req.requesting_department_id)) || {};
+      const oDept = dbData.departments.find(d => Number(d.id) === Number(req.owning_department_id)) || {};
+      const room = dbData.rooms.find(r => Number(r.id) === Number(req.room_id)) || {};
+      return {
+        ...req,
+        requesting_department_name: rDept.name || '',
+        requesting_department_code: rDept.code || '',
+        requesting_department_color: rDept.color || '#006633',
+        owning_department_name: oDept.name || '',
+        owning_department_code: oDept.code || '',
+        room_name: room.room_name || '',
+        room_type: room.room_type || 'Lecture Hall'
+      };
+    });
+
+    if (sql.toLowerCase().includes('where id =')) {
+      const reqId = Number(params[0]);
+      return list.filter(r => r.id === reqId);
+    }
+
+    if (sql.toLowerCase().includes('where owning_department_id =')) {
+      const deptId = Number(params[0]);
+      return list.filter(r => Number(r.owning_department_id) === deptId);
+    }
+
+    if (sql.toLowerCase().includes('where requesting_department_id =')) {
+      const deptId = Number(params[0]);
+      return list.filter(r => Number(r.requesting_department_id) === deptId);
+    }
+
+    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return list;
+  }
 
   if (trimmed.includes('FROM DEPARTMENTS')) {
     let result = dbData.departments.map(d => {
@@ -274,21 +405,7 @@ const query = async (sql, params = []) => {
   }
 
   if (trimmed.includes('FROM USERS')) {
-    if (params.length > 0 && params[0]) {
-      const username = params[0];
-      const user = dbData.users.find(u => u.username === username);
-      if (!user) return [];
-      const dept = dbData.departments.find(d => Number(d.id) === Number(user.department_id));
-      return [{
-        ...user,
-        department_name: dept ? dept.name : null,
-        department_code: dept ? dept.code : null,
-        department_color: dept ? dept.color : null
-      }];
-    }
-
-    // Return ALL users for Super Admin Credentials manager
-    return dbData.users.map(u => {
+    let result = dbData.users.map(u => {
       const dept = dbData.departments.find(d => Number(d.id) === Number(u.department_id));
       return {
         ...u,
@@ -297,6 +414,38 @@ const query = async (sql, params = []) => {
         department_color: dept ? dept.color : null
       };
     });
+
+    if (params.length > 0) {
+      const sqlLower = sql.toLowerCase();
+      
+      if (sqlLower.includes('where username =') && sqlLower.includes('and id !=')) {
+        const username = String(params[0]).trim();
+        const excludeId = Number(params[1]);
+        return result.filter(u => u.username === username && u.id !== excludeId);
+      }
+
+      if (sqlLower.includes('where id =') || sqlLower.includes('where u.id =')) {
+        const userId = Number(params[0]);
+        return result.filter(u => u.id === userId);
+      }
+
+      if (sqlLower.includes('where username =') || sqlLower.includes('where u.username =')) {
+        const username = String(params[0]).trim();
+        return result.filter(u => u.username === username);
+      }
+
+      // Fallback check parameter type
+      const paramVal = params[0];
+      if (typeof paramVal === 'number' || !isNaN(Number(paramVal))) {
+        const userId = Number(paramVal);
+        return result.filter(u => u.id === userId);
+      } else {
+        const username = String(paramVal).trim();
+        return result.filter(u => u.username === username);
+      }
+    }
+
+    return result;
   }
 
   if (trimmed.includes('FROM ROOMS')) {
@@ -367,7 +516,7 @@ const query = async (sql, params = []) => {
     });
   }
 
-  if (trimmed.includes('FROM TIMETABLE_ENTRIES T')) {
+  if (trimmed.includes('FROM TIMETABLE_ENTRIES')) {
     let list = dbData.timetable_entries.map(t => {
       const c = dbData.courses.find(x => Number(x.id) === Number(t.course_id)) || {};
       const i = dbData.instructors.find(x => Number(x.id) === Number(t.instructor_id)) || {};
@@ -393,6 +542,11 @@ const query = async (sql, params = []) => {
         department_color: d.color || '#006633'
       };
     });
+
+    if (sql.toLowerCase().includes('where id =') || sql.toLowerCase().includes('where t.id =')) {
+      const targetId = Number(params[0]);
+      return list.filter(e => Number(e.id) === targetId);
+    }
 
     if (trimmed.includes('T.DAY_OF_WEEK = ? AND T.ROOM_ID = ?')) {
       const day = params[0];

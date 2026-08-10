@@ -10,6 +10,7 @@ const courseRoutes = require('./routes/courseRoutes');
 const instructorRoutes = require('./routes/instructorRoutes');
 const timetableRoutes = require('./routes/timetableRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const requestRoutes = require('./routes/requestRoutes');
 
 const { initDatabase } = require('./db/database');
 
@@ -44,6 +45,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/instructors', instructorRoutes);
 app.use('/api/timetable', timetableRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/requests', requestRoutes);
 
 // Fallback to index.html for Single Page Architecture
 app.get('*', (req, res) => {

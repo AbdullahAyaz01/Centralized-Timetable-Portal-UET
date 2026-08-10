@@ -78,26 +78,13 @@
       </div>
     </div>
 
-    <!-- Demo Accounts Console -->
-    <div class="demo-credentials-card">
-      <h3><i class="fa-solid fa-key"></i> Quick Demo Login Console</h3>
-      <p>Click any button below to instantly populate credentials into the login modal:</p>
-      <div class="demo-buttons-flex">
-        <button class="demo-login-btn" onclick="openLoginModal(); fillLogin('admin', 'admin123');">
-          <i class="fa-solid fa-user-shield" style="color: #c084fc;"></i> Super Admin (admin / admin123)
-        </button>
-        <button class="demo-login-btn" onclick="openLoginModal(); fillLogin('cs_admin', 'cs123');">
-          <i class="fa-solid fa-laptop-code" style="color: #4ade80;"></i> CS Dept Head (cs_admin / cs123)
-        </button>
-        <button class="demo-login-btn" onclick="openLoginModal(); fillLogin('ee_admin', 'ee123');">
-          <i class="fa-solid fa-bolt" style="color: #fb923c;"></i> EE Dept Head (ee_admin / ee123)
-        </button>
-      </div>
-    </div>
   </section>
 
   <!-- AUTHENTICATED DASHBOARD LAYOUT (Appears ONLY when logged in) -->
   <div class="uet-layout" id="authenticatedLayout" style="display: none;">
+
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebarMobile()"></div>
 
     <!-- UET KSK Left Sidebar Navigation -->
     <aside class="uet-sidebar no-print" id="uetSidebar">
@@ -130,8 +117,17 @@
           <li class="nav-item" id="navRooms" onclick="switchMainView('viewRoomsManager', this)">
             <a href="javascript:void(0)"><i class="fa-solid fa-door-open"></i> <span>Rooms Manager</span></a>
           </li>
+          <li class="nav-item" id="navRequests" onclick="switchMainView('viewRoomRequests', this)">
+            <a href="javascript:void(0)">
+              <i class="fa-solid fa-paper-plane"></i> <span>Room Requests</span>
+              <span class="badge bg-purple" id="pendingRequestsBadge" style="display:none; margin-left: auto;">0</span>
+            </a>
+          </li>
           <li class="nav-item" id="navAdminCreds" style="display: none;" onclick="switchMainView('viewAdminCreds', this)">
             <a href="javascript:void(0)"><i class="fa-solid fa-user-shield"></i> <span>Coordinator Passwords</span></a>
+          </li>
+          <li class="nav-item" id="navSettings" onclick="switchMainView('viewSettings', this)">
+            <a href="javascript:void(0)"><i class="fa-solid fa-gear"></i> <span>Settings</span></a>
           </li>
         </ul>
 
@@ -155,16 +151,11 @@
           <h1 class="header-title">UET KSK Dashboard</h1>
         </div>
 
-        <!-- Header Actions: Search, Notification, Profile -->
+        <!-- Header Actions: Search, Profile -->
         <div class="header-right">
           <div class="header-search">
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" id="globalSearchInput" placeholder="Search room or course..." oninput="handleSearch()">
-          </div>
-
-          <div class="notif-badge">
-            <i class="fa-solid fa-bell"></i>
-            <span class="badge-count">3</span>
           </div>
 
           <div class="user-profile-menu" id="userProfileContainer">
@@ -301,13 +292,12 @@
               <div class="filter-item">
                 <label><i class="fa-solid fa-calendar-day"></i> Day</label>
                 <select id="filterDay" onchange="renderTimetable()">
-                  <option value="">All Days (Mon - Sat)</option>
+                  <option value="">All Days (Mon - Fri)</option>
                   <option value="Monday">Monday</option>
                   <option value="Tuesday">Tuesday</option>
                   <option value="Wednesday">Wednesday</option>
                   <option value="Thursday">Thursday</option>
                   <option value="Friday">Friday</option>
-                  <option value="Saturday">Saturday</option>
                 </select>
               </div>
 
@@ -367,8 +357,15 @@
         <section id="viewExcelImport" class="main-view" style="display: none;">
           <div class="card glass-card">
             <div class="card-header border-b">
-              <h2><i class="fa-solid fa-file-excel"></i> Drag & Drop Excel Timetable Importer</h2>
-              <p class="text-muted">Upload your department's timetable spreadsheet (`.xlsx` or `.csv`) to automatically populate schedule slots into the database.</p>
+              <div>
+                <h2><i class="fa-solid fa-file-excel"></i> Drag & Drop Excel Timetable Importer</h2>
+                <p class="text-muted">Upload your department's timetable spreadsheet (`.xlsx` or `.csv`) to automatically populate schedule slots into the database.</p>
+              </div>
+              <div>
+                <button class="btn btn-success" onclick="downloadExcelTemplate()">
+                  <i class="fa-solid fa-file-excel"></i> Download Pattern Template (.xlsx)
+                </button>
+              </div>
             </div>
             <div class="card-body">
               
@@ -378,9 +375,14 @@
                 <h3>Drag & Drop your Department `.xlsx` File Here</h3>
                 <p>or click to browse and select file from your computer</p>
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleFileSelect(event)">
-                <button class="btn btn-primary mt-3" onclick="document.getElementById('excelFileInput').click()">
-                  <i class="fa-solid fa-folder-open"></i> Browse Excel File
-                </button>
+                <div class="d-flex align-items-center justify-content-center gap-3 mt-3">
+                  <button class="btn btn-primary" onclick="document.getElementById('excelFileInput').click()">
+                    <i class="fa-solid fa-folder-open"></i> Browse Excel File
+                  </button>
+                  <button class="btn btn-success" onclick="downloadExcelTemplate()">
+                    <i class="fa-solid fa-file-excel"></i> Download Pattern Template
+                  </button>
+                </div>
               </div>
 
               <!-- Quick Preset Importer for dashboard.xlsx -->
@@ -433,6 +435,99 @@
               <div id="adminCredsTableContainer">
                 <!-- Rendered dynamically -->
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 7: CROSS-DEPARTMENT ROOM ALLOCATION REQUEST MANAGER -->
+        <section id="viewRoomRequests" class="main-view" style="display: none;">
+          <div class="card glass-card">
+            <div class="card-header border-b">
+              <div>
+                <h2><i class="fa-solid fa-paper-plane"></i> Cross-Department Room Allocation Requests</h2>
+                <p class="text-muted">Request vacant classrooms & labs owned by other departments for your class, or approve incoming requests for your department's rooms.</p>
+              </div>
+              <div>
+                <button class="btn btn-primary" id="btnOpenRequestModal" onclick="openRoomRequestModal()">
+                  <i class="fa-solid fa-plus-circle"></i> Submit Room Request
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="d-flex gap-2 mb-4 border-b pb-2 flex-wrap">
+                <button class="btn btn-outline active" id="tabIncomingReqs" onclick="switchRequestTab('incoming')">
+                  <i class="fa-solid fa-inbox"></i> Incoming Requests for My Rooms <span class="badge bg-purple" id="tabIncomingBadge">0</span>
+                </button>
+                <button class="btn btn-outline" id="tabOutgoingReqs" onclick="switchRequestTab('outgoing')">
+                  <i class="fa-solid fa-paper-plane"></i> My Sent Requests <span class="badge badge-default" id="tabOutgoingBadge">0</span>
+                </button>
+                <button class="btn btn-outline" id="tabAllReqs" onclick="switchRequestTab('all')">
+                  <i class="fa-solid fa-list-check"></i> All Department Requests <span class="badge badge-default" id="tabAllBadge">0</span>
+                </button>
+              </div>
+
+              <div id="roomRequestsListContainer">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 8: ACCOUNT & SECURITY SETTINGS (FOR ALL ROLES) -->
+        <section id="viewSettings" class="main-view" style="display: none;">
+          <div class="card glass-card modal-large" style="margin: 0 auto;">
+            <div class="card-header border-b">
+              <div>
+                <h2><i class="fa-solid fa-gear"></i> Account & Security Settings</h2>
+                <p class="text-muted">Manage your full name, email, login username, and password credentials.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <form id="settingsForm" onsubmit="handleUpdateSettings(event)">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Full Name <span class="req">*</span></label>
+                    <input type="text" id="settingFullName" placeholder="e.g. Dr. John Doe" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="settingEmail" placeholder="e.g. john@uet.edu.pk">
+                  </div>
+
+                  <div class="form-group">
+                    <label>Login Username <span class="req">*</span></label>
+                    <input type="text" id="settingUsername" placeholder="e.g. cs_admin" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Role & Department</label>
+                    <input type="text" id="settingRoleDept" readonly disabled style="background: #f1f5f9; cursor: not-allowed; font-weight:600;">
+                  </div>
+                </div>
+
+                <hr style="border-color: var(--border-color); margin: 20px 0;">
+
+                <h4><i class="fa-solid fa-lock"></i> Security & Authorization</h4>
+                <div class="form-grid mt-2">
+                  <div class="form-group">
+                    <label>Current Password <span class="req">*</span> <small class="text-muted">(Required to save changes)</small></label>
+                    <input type="password" id="settingCurrentPassword" placeholder="••••••••" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label>New Password <small class="text-muted">(Leave blank to keep unchanged)</small></label>
+                    <input type="password" id="settingNewPassword" placeholder="••••••••">
+                  </div>
+                </div>
+
+                <div id="settingsSuccess" class="alert-banner mt-2" style="display: none; background: #f0fdf4; border-color: #bbf7d0; color: #15803d;"></div>
+                <div id="settingsError" class="form-error mt-2" style="display: none;"></div>
+
+                <div class="modal-footer mt-3" style="position: static; margin: 20px 0 0 0; padding-right: 0;">
+                  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+                </div>
+              </form>
             </div>
           </div>
         </section>
@@ -492,13 +587,15 @@
             </div>
 
             <div class="form-group">
-              <label>Course <span class="req">*</span></label>
-              <select id="slotCourse" required></select>
+              <label>Course Name <span class="req">*</span> <small class="text-muted">(Select or Type New)</small></label>
+              <input type="text" id="slotCourse" list="slotCourseDatalist" placeholder="e.g. Programming Fundamentals" required autocomplete="off">
+              <datalist id="slotCourseDatalist"></datalist>
             </div>
 
             <div class="form-group">
               <label>Classroom / Lab <span class="req">*</span></label>
-              <select id="slotRoom" required></select>
+              <select id="slotRoom" required onchange="onSlotRoomChange()"></select>
+              <div id="slotRoomNotice" class="mt-1" style="display: none;"></div>
             </div>
 
             <div class="form-group">
@@ -509,23 +606,22 @@
                 <option value="Wednesday">Wednesday</option>
                 <option value="Thursday">Thursday</option>
                 <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label>Start Time <span class="req">*</span></label>
-              <input type="time" id="slotStart" required value="08:00">
+              <label>Start Time <span class="req">*</span> <small class="text-muted">(Min: 07:30 AM)</small></label>
+              <input type="time" id="slotStart" required value="08:00" min="07:30" max="16:00">
             </div>
 
             <div class="form-group">
-              <label>End Time <span class="req">*</span></label>
-              <input type="time" id="slotEnd" required value="09:00">
+              <label>End Time <span class="req">*</span> <small class="text-muted">(Max: 04:00 PM)</small></label>
+              <input type="time" id="slotEnd" required value="09:00" min="07:30" max="16:00">
             </div>
 
             <div class="form-group">
-              <label>Class Section / Batch <span class="req">*</span></label>
-              <input type="text" id="slotSection" placeholder="e.g. CS-1A, EE-3B" required>
+              <label>Section Name <span class="req">*</span> <small class="text-muted">(e.g. A, B)</small></label>
+              <input type="text" id="slotSection" placeholder="e.g. A, B or C" value="A" required>
             </div>
 
             <div class="form-group">
@@ -572,7 +668,6 @@
                 <option value="Wednesday">Wednesday</option>
                 <option value="Thursday">Thursday</option>
                 <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
               </select>
             </div>
             <div class="form-group">
@@ -695,6 +790,89 @@
           </div>
           
           <button type="submit" class="btn btn-primary btn-full mt-3">Add Room</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Cross-Department Room Request Modal -->
+  <div class="modal" id="roomRequestModal">
+    <div class="modal-content glass-card modal-large">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-paper-plane"></i> Request Cross-Department Room Allocation</h3>
+        <button class="modal-close" onclick="closeRoomRequestModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="roomRequestForm" onsubmit="handleCreateRoomRequest(event)">
+          <div class="form-grid">
+            <div class="form-group" style="grid-column: span 2;">
+              <label>Select Target Room (Belonging to another department) <span class="req">*</span></label>
+              <select id="reqRoom" required onchange="checkRequestRoomVacancy()"></select>
+            </div>
+
+            <div class="form-group">
+              <label>Day of Week <span class="req">*</span></label>
+              <select id="reqDay" required onchange="checkRequestRoomVacancy()">
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Start Time <span class="req">*</span></label>
+              <input type="time" id="reqStart" required value="08:00" onchange="checkRequestRoomVacancy()">
+            </div>
+
+            <div class="form-group">
+              <label>End Time <span class="req">*</span></label>
+              <input type="time" id="reqEnd" required value="09:00" onchange="checkRequestRoomVacancy()">
+            </div>
+
+            <div class="form-group">
+              <label>Course Code <span class="req">*</span></label>
+              <input type="text" id="reqCourseCode" placeholder="e.g. CS-101" required>
+            </div>
+
+            <div class="form-group">
+              <label>Course / Subject Name <span class="req">*</span></label>
+              <input type="text" id="reqCourseName" placeholder="e.g. Programming Fundamentals" required>
+            </div>
+
+            <div class="form-group">
+              <label>Class Section <span class="req">*</span></label>
+              <input type="text" id="reqSection" placeholder="e.g. CS-1A" required>
+            </div>
+
+            <div class="form-group">
+              <label>Semester <span class="req">*</span></label>
+              <select id="reqSemester" required>
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+                <option value="3">Semester 3</option>
+                <option value="4">Semester 4</option>
+                <option value="5">Semester 5</option>
+                <option value="6">Semester 6</option>
+                <option value="7">Semester 7</option>
+                <option value="8">Semester 8</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="grid-column: span 2;">
+              <label>Reason / Notes for Owning Department</label>
+              <input type="text" id="reqNotes" placeholder="e.g. Requesting extra room for combined lab session">
+            </div>
+          </div>
+
+          <div id="reqVacancyStatus" class="mt-2 mb-3"></div>
+          <div id="reqError" class="form-error" style="display: none;"></div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeRoomRequestModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitReq">Submit Room Request</button>
+          </div>
         </form>
       </div>
     </div>
