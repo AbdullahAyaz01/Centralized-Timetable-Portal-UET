@@ -72,7 +72,7 @@ router.put('/:id', isAuthenticated, async (req, res) => {
     const targetDeptId = department_id || room.department_id;
     const finalChairs = Number(chairs_count) || Number(capacity) || room.capacity;
     const finalProjector = projector === 'Yes' || projector === 1 || projector === '1' ? 1 : 0;
-    const finalComputers = Number(computers_count) || (room_type === 'Computer Lab' ? 40 : 0);
+    const finalComputers = Number(computers_count) || (room_type === 'Computer Lab' ? 40 : (room_type === 'Science Lab' ? 10 : 0));
 
     await run(
       'UPDATE ROOMS SET department_id = ?, capacity = ?, chairs_count = ?, room_type = ?, projector = ?, computers_count = ? WHERE id = ?',

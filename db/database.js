@@ -233,7 +233,7 @@ const run = async (sql, params = []) => {
   }
 
   if (trimmed.startsWith('INSERT INTO INSTRUCTORS')) {
-    const [name, email, designation, department_id] = params;
+    const [name, email, designation, department_id, phone, office_room, max_credit_hours] = params;
     dbData.counters.instructors++;
     const newInst = {
       id: dbData.counters.instructors,
@@ -241,11 +241,42 @@ const run = async (sql, params = []) => {
       email: email || '',
       designation: designation || 'Lecturer',
       department_id: Number(department_id),
+      phone: phone || '+92 42 99029200',
+      office_room: office_room || 'Academic Block, Faculty Office',
+      max_credit_hours: Number(max_credit_hours) || 12,
       created_at: new Date().toISOString()
     };
     dbData.instructors.push(newInst);
     saveDb();
     return { id: newInst.id, changes: 1 };
+  }
+
+  if (trimmed.startsWith('UPDATE INSTRUCTORS SET')) {
+    const [name, email, designation, department_id, phone, office_room, max_credit_hours, instId] = params;
+    const inst = dbData.instructors.find(i => i.id === Number(instId));
+    if (inst) {
+      if (name) inst.name = name;
+      if (email !== undefined) inst.email = email;
+      if (designation) inst.designation = designation;
+      if (department_id) inst.department_id = Number(department_id);
+      if (phone !== undefined) inst.phone = phone;
+      if (office_room !== undefined) inst.office_room = office_room;
+      if (max_credit_hours !== undefined) inst.max_credit_hours = Number(max_credit_hours);
+      inst.updated_at = new Date().toISOString();
+      saveDb();
+      return { id: inst.id, changes: 1 };
+    }
+    return { id: instId, changes: 0 };
+  }
+
+  if (trimmed.startsWith('DELETE FROM INSTRUCTORS')) {
+    const instId = Number(params[0]);
+    const initialLen = dbData.instructors.length;
+    dbData.instructors = dbData.instructors.filter(i => Number(i.id) !== instId);
+    // Remove references in timetable entries
+    dbData.timetable_entries = dbData.timetable_entries.filter(t => Number(t.instructor_id) !== instId);
+    saveDb();
+    return { changes: initialLen - dbData.instructors.length };
   }
 
   if (trimmed.startsWith('INSERT INTO TIMETABLE_ENTRIES')) {
@@ -658,10 +689,22 @@ const query = async (sql, params = []) => {
 // Database Initialization & Automatic Seeding from dashboard.xlsx Dataset
 const initDatabase = async () => {
   loadDb();
-  if (dbData.departments.length > 0) {
+  if (dbData.departments.length > 0 && dbData.instructors && dbData.instructors.length >= 20) {
     console.log('Database loaded with existing data.');
     return;
   }
+  
+  // Reset dbData to perform fresh seed with official CS faculty data
+  dbData = {
+    departments: [],
+    users: [],
+    rooms: [],
+    courses: [],
+    instructors: [],
+    timetable_entries: [],
+    room_requests: [],
+    counters: { departments: 0, users: 0, rooms: 0, courses: 0, instructors: 0, timetable_entries: 0, room_requests: 0 }
+  };
 
   console.log('Seeding initial UET KSK database with dashboard.xlsx dataset...');
 
@@ -682,18 +725,30 @@ const initDatabase = async () => {
     deptIds[d.code] = newDept.id;
   }
 
-  // 2. Users (Super Admin + Dept Coordinators)
+  // 2. Users (Super Admin + 5 Department Coordinators)
   const adminPass = await bcrypt.hash('admin123', 10);
   dbData.counters.users++;
   dbData.users.push({ id: dbData.counters.users, username: 'admin', password_hash: adminPass, full_name: 'UET Super Admin', email: 'admin@uet.edu.pk', role: 'admin', department_id: null, created_at: new Date().toISOString() });
 
   const csPass = await bcrypt.hash('cs123', 10);
   dbData.counters.users++;
-  dbData.users.push({ id: dbData.counters.users, username: 'cs_admin', password_hash: csPass, full_name: 'Dr. Alan Turing (CS Head)', email: 'cs@uet.edu.pk', role: 'dept_admin', department_id: deptIds['CS'], created_at: new Date().toISOString() });
+  dbData.users.push({ id: dbData.counters.users, username: 'cs_admin', password_hash: csPass, full_name: 'Dr. Junaid Arshad (CS Head)', email: 'cs@uet.edu.pk', role: 'dept_admin', department_id: deptIds['CS'], created_at: new Date().toISOString() });
 
   const eePass = await bcrypt.hash('ee123', 10);
   dbData.counters.users++;
-  dbData.users.push({ id: dbData.counters.users, username: 'ee_admin', password_hash: eePass, full_name: 'Prof. Tesla (EE Head)', email: 'ee@uet.edu.pk', role: 'dept_admin', department_id: deptIds['EE'], created_at: new Date().toISOString() });
+  dbData.users.push({ id: dbData.counters.users, username: 'ee_admin', password_hash: eePass, full_name: 'Dr. Muhammad Asghar (EE Head)', email: 'ee@uet.edu.pk', role: 'dept_admin', department_id: deptIds['EE'], created_at: new Date().toISOString() });
+
+  const mePass = await bcrypt.hash('me123', 10);
+  dbData.counters.users++;
+  dbData.users.push({ id: dbData.counters.users, username: 'me_admin', password_hash: mePass, full_name: 'Dr. Tariq Mahmood (ME Head)', email: 'me@uet.edu.pk', role: 'dept_admin', department_id: deptIds['ME'], created_at: new Date().toISOString() });
+
+  const civPass = await bcrypt.hash('civ123', 10);
+  dbData.counters.users++;
+  dbData.users.push({ id: dbData.counters.users, username: 'civ_admin', password_hash: civPass, full_name: 'Dr. Khalid Mehmood (CIV Head)', email: 'civ@uet.edu.pk', role: 'dept_admin', department_id: deptIds['CIV'], created_at: new Date().toISOString() });
+
+  const envPass = await bcrypt.hash('env123', 10);
+  dbData.counters.users++;
+  dbData.users.push({ id: dbData.counters.users, username: 'env_admin', password_hash: envPass, full_name: 'Dr. Sajjad H. Sumra (ENV Head)', email: 'env@uet.edu.pk', role: 'dept_admin', department_id: deptIds['ENV'], created_at: new Date().toISOString() });
 
   // 3. Rooms strictly matching dashboard.xlsx!
   const csRooms = [
@@ -753,28 +808,87 @@ const initDatabase = async () => {
     courseIds[c.code] = newCourse.id;
   }
 
-  // 5. Instructors
+  // 5. Instructors (Official CS Faculty List from https://csksk.uet.edu.pk/faculty/ + Departmental Faculty)
   const instructors = [
-    { name: 'Dr. John Von Neumann', email: 'neumann@uet.edu.pk', desig: 'Professor', dept: deptIds['CS'] },
-    { name: 'Prof. Grace Hopper', email: 'hopper@uet.edu.pk', desig: 'Associate Professor', dept: deptIds['CS'] },
-    { name: 'Dr. Claude Shannon', email: 'shannon@uet.edu.pk', desig: 'Professor', dept: deptIds['EE'] }
+    // Department of Computer Science (Official 27 Faculty Members from https://csksk.uet.edu.pk/faculty/)
+    // Professors & Dean / Chairman (4)
+    { name: 'Prof. Dr. Muhammad Shoaib', email: 'shoaib@uet.edu.pk', desig: 'Professor', phone: '+92 42 99029200', office: 'Dean Office, CS Block', dept: deptIds['CS'] },
+    { name: 'Dr. Junaid Arshad', email: 'junaid.arshad@uet.edu.pk', desig: 'Associate Professor', phone: '+92 42 99029260', office: 'Chairman Office, CS Block', dept: deptIds['CS'] },
+    { name: 'Dr. Umar Qasim', email: 'umar.qasim@uet.edu.pk', desig: 'Professor', phone: '+92 42 99029200', office: 'CS Block Office 101', dept: deptIds['CS'] },
+    { name: 'Prof. Dr. Hafiz Muhammad Shahzad Asif', email: 'shahzad.asif@uet.edu.pk', desig: 'Professor', phone: '+92 42 99029200', office: 'CS Block Office 102', dept: deptIds['CS'] },
+    
+    // Assistant Professors (4)
+    { name: 'Dr. Farah Adeeba', email: 'farah.adeeba@uet.edu.pk', desig: 'Assistant Professor', phone: '+92 42 99029200', office: 'CS Block Office 103', dept: deptIds['CS'] },
+    { name: 'Dr. Irfan Yousuf', email: 'irfan.yousuf@uet.edu.pk', desig: 'Assistant Professor', phone: '+92 42 99029200', office: 'CS Block Office 104', dept: deptIds['CS'] },
+    { name: 'Dr. Qurat-ul-Ain', email: 'quratulain@uet.edu.pk', desig: 'Assistant Professor', phone: '+92 42 99029200', office: 'CS Block Office 105', dept: deptIds['CS'] },
+    { name: 'Dr. Zeeshan Ramzan', email: 'zeeshan.ramzan@uet.edu.pk', desig: 'Assistant Professor', phone: '+92 42 99029200', office: 'CS Block Office 106', dept: deptIds['CS'] },
+
+    // Lecturers (12)
+    { name: 'Ms. Alina Munir', email: 'alina.munir@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 201', dept: deptIds['CS'] },
+    { name: 'Hafiz Muhammad Danish', email: 'danish@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 202', dept: deptIds['CS'] },
+    { name: 'Ms. Anam Iftikhar', email: 'anam.iftikhar@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 203', dept: deptIds['CS'] },
+    { name: 'Ms. Drakhshan Bokhat', email: 'drakhshan@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 204', dept: deptIds['CS'] },
+    { name: 'Ms. Rimsha Noreen', email: 'rimsha.noreen@uet.edu.pk', desig: 'Lecturer', phone: '+92 331 418835', office: 'CS Block Office 205', dept: deptIds['CS'] },
+    { name: 'Ms. Sana Afzal', email: 'sana.afzal@uet.edu.pk', desig: 'Lecturer', phone: '+92 312 6604971', office: 'CS Block Office 206', dept: deptIds['CS'] },
+    { name: 'Mr. Nadeem Iqbal', email: 'nadeem.iqbal@uet.edu.pk', desig: 'Lecturer', phone: '+92 301 3098587', office: 'CS Block Office 207', dept: deptIds['CS'] },
+    { name: 'Mr. Muzamil Dilawar', email: 'muzamil.dilawar@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 208', dept: deptIds['CS'] },
+    { name: 'Mr. Aizaz Akmal', email: 'aizaz.akmal@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 209', dept: deptIds['CS'] },
+    { name: 'Ms. Namra Sheikh', email: 'namra.sheikh@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 210', dept: deptIds['CS'] },
+    { name: 'Mr. Usman Ghani', email: 'usman.ghani@uet.edu.pk', desig: 'Lecturer', phone: '+92 340 3026556', office: 'CS Block Office 211', dept: deptIds['CS'] },
+    { name: 'Ms. Zoha', email: 'zoha@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029200', office: 'CS Block Office 212', dept: deptIds['CS'] },
+
+    // Teaching Fellows / Assistants (7)
+    { name: 'Mr. Ali Raza', email: 'ali.raza@uet.edu.pk', desig: 'Teaching Fellow', phone: '+92 312 6446637', office: 'CS Block Lab Wing', dept: deptIds['CS'] },
+    { name: 'Mr. Noman Munir', email: 'noman.munir@uet.edu.pk', desig: 'Teaching Fellow', phone: '+92 308 8656673', office: 'CS Block Lab Wing', dept: deptIds['CS'] },
+    { name: 'Mr. Hassan Arif', email: 'hassan.arif@uet.edu.pk', desig: 'Teaching Fellow', phone: '+92 42 99029200', office: 'CS Block Lab Wing', dept: deptIds['CS'] },
+    { name: 'Ms. Sonia Asghar', email: 'sonia.asghar@uet.edu.pk', desig: 'Teaching Fellow', phone: '+92 42 99029200', office: 'CS Block Lab Wing', dept: deptIds['CS'] },
+    { name: 'Ms. Rida', email: 'rida@uet.edu.pk', desig: 'Teaching Fellow', phone: '+92 42 99029200', office: 'CS Block Lab Wing', dept: deptIds['CS'] },
+    { name: 'Ghazala Shabbir', email: 'ghazala.shabbir@uet.edu.pk', desig: 'Teaching Fellow', phone: '+92 42 99029200', office: 'CS Block Lab Wing', dept: deptIds['CS'] },
+    { name: 'Ms. Shanfa Irum', email: 'shanfa.irum@uet.edu.pk', desig: 'Teaching Fellow', phone: '+92 42 99029200', office: 'CS Block Lab Wing', dept: deptIds['CS'] },
+
+    // Official Electrical Engineering Faculty Members (UET KSK)
+    { name: 'Dr. Muhammad Asghar', email: 'asghar.ee@uet.edu.pk', desig: 'Associate Professor', phone: '+92 42 99029210', office: 'EE Complex 101', dept: deptIds['EE'] },
+    { name: 'Dr. Syed Abdul Rahman', email: 'rahman.ee@uet.edu.pk', desig: 'Assistant Professor', phone: '+92 42 99029211', office: 'EE Complex 102', dept: deptIds['EE'] },
+    { name: 'Engr. Muhammad Hamza', email: 'hamza.ee@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029212', office: 'EE Complex 201', dept: deptIds['EE'] },
+
+    // Official Mechanical Engineering Faculty Members (UET KSK)
+    { name: 'Dr. Tariq Mahmood', email: 'tariq.me@uet.edu.pk', desig: 'Associate Professor', phone: '+92 42 99029220', office: 'ME Block 101', dept: deptIds['ME'] },
+    { name: 'Engr. Shahbaz Ahmed', email: 'shahbaz.me@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029221', office: 'ME Block 201', dept: deptIds['ME'] },
+
+    // Official Civil Engineering Faculty Members (UET KSK)
+    { name: 'Dr. Khalid Mehmood', email: 'khalid.civ@uet.edu.pk', desig: 'Associate Professor', phone: '+92 42 99029230', office: 'CIV Block 101', dept: deptIds['CIV'] },
+    { name: 'Engr. Usman Khalid', email: 'usman.civ@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029231', office: 'CIV Block 201', dept: deptIds['CIV'] },
+
+    // Official Environmental Engineering Faculty Members (UET KSK)
+    { name: 'Dr. Sajjad H. Sumra', email: 'sajjad.env@uet.edu.pk', desig: 'Associate Professor', phone: '+92 42 99029240', office: 'ENV Wing 101', dept: deptIds['ENV'] },
+    { name: 'Engr. Maria Bilal', email: 'maria.env@uet.edu.pk', desig: 'Lecturer', phone: '+92 42 99029241', office: 'ENV Wing 201', dept: deptIds['ENV'] }
   ];
 
   const instructorIds = {};
   for (const inst of instructors) {
     dbData.counters.instructors++;
-    const newInst = { id: dbData.counters.instructors, name: inst.name, email: inst.email, designation: inst.desig, department_id: inst.dept, created_at: new Date().toISOString() };
+    const newInst = {
+      id: dbData.counters.instructors,
+      name: inst.name,
+      email: inst.email,
+      designation: inst.desig,
+      phone: inst.phone || '+92 42 99029200',
+      office_room: inst.office || 'Academic Block',
+      max_credit_hours: inst.desig.includes('Professor') ? 9 : 12,
+      department_id: inst.dept,
+      created_at: new Date().toISOString()
+    };
     dbData.instructors.push(newInst);
     instructorIds[inst.name] = newInst.id;
   }
 
   // 6. Timetable Entries
   const sampleEntries = [
-    { dept: deptIds['CS'], course: courseIds['CS-101'], inst: instructorIds['Dr. John Von Neumann'], room: roomIds['G-10'], day: 'Monday', start: '08:00', end: '09:00', sec: 'CS-1A', sem: 1, type: 'Lecture' },
-    { dept: deptIds['CS'], course: courseIds['CS-201'], inst: instructorIds['Prof. Grace Hopper'], room: roomIds['G-05'], day: 'Monday', start: '09:00', end: '11:00', sec: 'CS-3A', sem: 3, type: 'Lab' },
-    { dept: deptIds['CS'], course: courseIds['CS-301'], inst: instructorIds['Dr. John Von Neumann'], room: roomIds['G-11'], day: 'Tuesday', start: '10:00', end: '11:00', sec: 'CS-5A', sem: 5, type: 'Lecture' },
-    { dept: deptIds['CS'], course: courseIds['CS-401'], inst: instructorIds['Prof. Grace Hopper'], room: roomIds['F-04'], day: 'Wednesday', start: '11:00', end: '12:00', sec: 'CS-7A', sem: 7, type: 'Lecture' },
-    { dept: deptIds['EE'], course: courseIds['EE-101'], inst: instructorIds['Dr. Claude Shannon'], room: roomIds['EE Hall 202'], day: 'Thursday', start: '08:00', end: '09:00', sec: 'EE-1A', sem: 1, type: 'Lecture' }
+    { dept: deptIds['CS'], course: courseIds['CS-101'], inst: instructorIds['Dr. Farah Adeeba'], room: roomIds['G-10'], day: 'Monday', start: '08:00', end: '09:00', sec: 'CS-1A', sem: 1, type: 'Lecture' },
+    { dept: deptIds['CS'], course: courseIds['CS-201'], inst: instructorIds['Ms. Alina Munir'], room: roomIds['G-05'], day: 'Monday', start: '09:00', end: '11:00', sec: 'CS-3A', sem: 3, type: 'Lab' },
+    { dept: deptIds['CS'], course: courseIds['CS-301'], inst: instructorIds['Dr. Irfan Yousuf'], room: roomIds['G-11'], day: 'Tuesday', start: '10:00', end: '11:00', sec: 'CS-5A', sem: 5, type: 'Lecture' },
+    { dept: deptIds['CS'], course: courseIds['CS-401'], inst: instructorIds['Dr. Qurat-ul-Ain'], room: roomIds['F-04'], day: 'Wednesday', start: '11:00', end: '12:00', sec: 'CS-7A', sem: 7, type: 'Lecture' },
+    { dept: deptIds['EE'], course: courseIds['EE-101'], inst: instructorIds['Prof. Dr. Claude Shannon'], room: roomIds['EE Hall 202'], day: 'Thursday', start: '08:00', end: '09:00', sec: 'EE-1A', sem: 1, type: 'Lecture' }
   ];
 
   for (const entry of sampleEntries) {

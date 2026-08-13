@@ -127,13 +127,21 @@ router.get('/template', (req, res) => {
 
     // Sheet 1: Room Specs
     const roomSpecsData = [
-      ["Room No.", "No. of Chairs", "Projector (Yes or No)", "No. of Computers"],
-      ["G-10", 50, "Yes", 0],
-      ["G-11", 50, "No", 0],
-      ["F-04", 60, "Yes", 0],
-      ["Labs", "", "", ""],
-      ["G-05", 40, "Yes", 40],
-      ["G-16", 40, "Yes", 40]
+      ["Room No.", "No. of Chairs", "Projector (Yes or No)", "No. of Computers / Equipment", "Room Category"],
+      ["Lecture Rooms / Halls", "", "", "", ""],
+      ["G-10", 50, "Yes", 0, "Lecture Hall"],
+      ["G-11", 50, "No", 0, "Lecture Hall"],
+      ["F-04", 60, "Yes", 0, "Lecture Hall"],
+      ["Computer Labs", "", "", "", ""],
+      ["G-05", 40, "Yes", 40, "Computer Lab"],
+      ["G-16", 40, "Yes", 40, "Computer Lab"],
+      ["Science Labs", "", "", "", ""],
+      ["SL-01", 35, "Yes", 10, "Science Lab"],
+      ["SL-02", 35, "Yes", 12, "Science Lab"],
+      ["Seminar Halls", "", "", "", ""],
+      ["SH-01", 120, "Yes", 0, "Seminar Hall"],
+      ["Auditoriums", "", "", "", ""],
+      ["AUD-01", 300, "Yes", 0, "Auditorium"]
     ];
     const roomSpecsSheet = XLSX.utils.aoa_to_sheet(roomSpecsData);
     XLSX.utils.book_append_sheet(wb, roomSpecsSheet, "Room Specs");
@@ -162,26 +170,65 @@ router.get('/template', (req, res) => {
     const g05Sheet = XLSX.utils.aoa_to_sheet(g05Data);
     XLSX.utils.book_append_sheet(wb, g05Sheet, "G-05");
 
-    // Sheet 4: Pattern Guide
+    // Sheet 4: Matrix for SL-01 (Science Lab)
+    const sl01Data = [
+      ["Day / Time", "8-9 AM", "9-10 AM", "10-11 AM", "11-12 AM", "12-1 PM (Break)", "1-2 PM", "2-3 PM", "3-4 PM"],
+      ["Monday", "Physics Lab | Sem 1-A", "Physics Lab | Sem 1-A", 0, 0, "Lunch Break", "Chemistry Lab | Sem 1-A", "Chemistry Lab | Sem 1-A", 0],
+      ["Tuesday", 0, 0, "Circuit Analysis Lab | Sem 3-A", "Circuit Analysis Lab | Sem 3-A", 0, 0, 0, 0],
+      ["Wednesday", "Applied Physics Lab | Sem 1-B", "Applied Physics Lab | Sem 1-B", 0, 0, "Lunch Break", 0, 0, 0],
+      ["Thursday", 0, 0, "Environmental Eng Lab | Sem 5-A", "Environmental Eng Lab | Sem 5-A", 0, 0, 0, 0],
+      ["Friday", 0, 0, 0, 0, 0, "Jummah Break", 0, 0]
+    ];
+    const sl01Sheet = XLSX.utils.aoa_to_sheet(sl01Data);
+    XLSX.utils.book_append_sheet(wb, sl01Sheet, "SL-01");
+
+    // Sheet 5: Matrix for SH-01 (Seminar Hall)
+    const sh01Data = [
+      ["Day / Time", "8-9 AM", "9-10 AM", "10-11 AM", "11-12 AM", "12-1 PM (Break)", "1-2 PM", "2-3 PM", "3-4 PM"],
+      ["Monday", 0, 0, "Department Orientation Seminar | Sem 1-A", "Department Orientation Seminar | Sem 1-A", "Lunch Break", 0, 0, 0],
+      ["Tuesday", 0, 0, 0, 0, 0, "Guest Speaker Lecture | Sem 5-A", "Guest Speaker Lecture | Sem 5-A", 0],
+      ["Wednesday", 0, 0, "FYP Progress Workshop | Sem 7-A", "FYP Progress Workshop | Sem 7-A", "Lunch Break", 0, 0, 0],
+      ["Thursday", 0, 0, 0, 0, 0, "Industry Tech Talk | Sem 3-A", "Industry Tech Talk | Sem 3-A", 0],
+      ["Friday", 0, 0, 0, 0, 0, "Jummah Break", 0, 0]
+    ];
+    const sh01Sheet = XLSX.utils.aoa_to_sheet(sh01Data);
+    XLSX.utils.book_append_sheet(wb, sh01Sheet, "SH-01");
+
+    // Sheet 6: Matrix for AUD-01 (Auditorium)
+    const aud01Data = [
+      ["Day / Time", "8-9 AM", "9-10 AM", "10-11 AM", "11-12 AM", "12-1 PM (Break)", "1-2 PM", "2-3 PM", "3-4 PM"],
+      ["Monday", 0, 0, 0, 0, "Lunch Break", 0, 0, 0],
+      ["Tuesday", "Campus Welcome Ceremony | Sem 1-A", "Campus Welcome Ceremony | Sem 1-A", "Campus Welcome Ceremony | Sem 1-A", 0, 0, 0, 0, 0],
+      ["Wednesday", 0, 0, 0, 0, "Lunch Break", 0, 0, 0],
+      ["Thursday", 0, 0, "Annual Research Symposium | Sem 7-A", "Annual Research Symposium | Sem 7-A", 0, 0, 0, 0],
+      ["Friday", 0, 0, 0, 0, 0, "Jummah Break", 0, 0]
+    ];
+    const aud01Sheet = XLSX.utils.aoa_to_sheet(aud01Data);
+    XLSX.utils.book_append_sheet(wb, aud01Sheet, "AUD-01");
+
+    // Sheet 7: Pattern Guide
     const guideData = [
-      ["UET KSK Timetable Excel Pattern Guide"],
+      ["UET KSK Timetable Excel Pattern Guide (All 5 Room Categories)"],
       [""],
       ["Sheet 1: Room Specifications (First Sheet)"],
-      ["- Column 1: Room No (e.g. G-10, G-11, F-04, G-05)"],
-      ["- Column 2: No. of Chairs (e.g. 50, 60, 40)"],
-      ["- Column 3: Projector Available ('Yes' or 'No')"],
-      ["- Column 4: No. of Computers (For Labs, e.g. 40; for lecture halls set 0 or leave blank)"],
-      ["- Note: Use 'Labs' in Column 1 to start the computer labs section."],
+      ["- Column A (Room No.): Enter Room Code (e.g. G-10, G-05, SL-01, SH-01, AUD-01)"],
+      ["- Column B (No. of Chairs): Seating capacity (e.g. 50 for Lecture Hall, 40 for Computer Lab, 35 for Science Lab, 120 for Seminar Hall, 300 for Auditorium)"],
+      ["- Column C (Projector): Enter 'Yes' or 'No'"],
+      ["- Column D (No. of Computers / Equipment): Enter count of computers or lab equipment stations (e.g. 40 for Computer Lab, 10 for Science Lab, 0 for Lecture Hall/Hall)"],
+      ["- Column E (Room Category): MUST specify room category: 'Lecture Hall', 'Computer Lab', 'Science Lab', 'Seminar Hall', or 'Auditorium'"],
+      ["- Section Headers: You can also use section header rows in Column A like 'Lecture Rooms / Halls', 'Computer Labs', 'Science Labs', 'Seminar Halls', 'Auditoriums' to automatically assign categories!"],
       [""],
-      ["Sheets 2+: Room Timetable Matrix (One sheet per room name, e.g. 'G-10', 'G-05')"],
-      ["- Header Row (Row 1): 'Day / Time', '8-9 AM', '9-10 AM', '10-11 AM', '11-12 AM', '12-1 PM', '1-2 PM', '2-3 PM', '3-4 PM'"],
+      ["Sheets 2+: Room Timetable Matrices (One matrix sheet per room, e.g. 'G-10', 'G-05', 'SL-01', 'SH-01', 'AUD-01')"],
+      ["- Header Row (Row 1): 'Day / Time', '8-9 AM', '9-10 AM', '10-11 AM', '11-12 AM', '12-1 PM (Break)', '1-2 PM', '2-3 PM', '3-4 PM'"],
       ["- Column 1 (Days): Monday, Tuesday, Wednesday, Thursday, Friday"],
-      ["- Cell Format: Enter lecture details in cell format: Course Name | Sem [Semester]-[Section]"],
-      ["  Example 1: Programming Fundamentals | Sem 1-A"],
-      ["  Example 2: Data Structures | Sem 3-B"],
-      ["- (Note: Enter 1 or 'Yes' if you want default course & section assigned)"],
+      ["- Cell Format: Enter lecture details in exact format: Course Name | Sem [Semester]-[Section]"],
+      ["  Example 1 (Lecture Hall G-10): Programming Fundamentals | Sem 1-A"],
+      ["  Example 2 (Computer Lab G-05): Data Structures Lab | Sem 3-A"],
+      ["  Example 3 (Science Lab SL-01): Physics Lab | Sem 1-A"],
+      ["  Example 4 (Seminar Hall SH-01): Department Orientation Seminar | Sem 1-A"],
+      ["  Example 5 (Auditorium AUD-01): Campus Welcome Ceremony | Sem 1-A"],
       [""],
-      ["After filling out this template, upload the file in the UET KSK Timetable Portal!"]
+      ["Upload this spreadsheet in the UET KSK Timetable Portal to update room specifications and timetable schedule slots!"]
     ];
     const guideSheet = XLSX.utils.aoa_to_sheet(guideData);
     XLSX.utils.book_append_sheet(wb, guideSheet, "Pattern Guide");
@@ -240,30 +287,55 @@ router.post('/excel', isAuthenticated, upload.single('file'), async (req, res) =
     const rows1 = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
     if (rows1 && rows1.length > 0) {
-      let isLabSection = false;
+      let currentSectionCategory = 'Lecture Hall';
 
       for (let i = 0; i < rows1.length; i++) {
         const row = rows1[i];
         if (!row || row.length === 0) continue;
 
         const firstCol = String(row[0] || '').trim();
+        const fifthCol = String(row[4] || '').trim();
 
-        if (firstCol.toLowerCase().includes('lab')) {
-          isLabSection = true;
+        const lowerFirst = firstCol.toLowerCase();
+        if (lowerFirst.includes('science lab')) {
+          currentSectionCategory = 'Science Lab';
+          continue;
+        } else if (lowerFirst.includes('computer lab') || lowerFirst === 'labs' || lowerFirst === 'computer labs') {
+          currentSectionCategory = 'Computer Lab';
+          continue;
+        } else if (lowerFirst.includes('seminar')) {
+          currentSectionCategory = 'Seminar Hall';
+          continue;
+        } else if (lowerFirst.includes('auditorium')) {
+          currentSectionCategory = 'Auditorium';
+          continue;
+        } else if (lowerFirst.includes('lecture')) {
+          currentSectionCategory = 'Lecture Hall';
           continue;
         }
 
-        if (firstCol.toLowerCase().includes('room no') || firstCol.toLowerCase() === 'labs') {
+        if (lowerFirst.includes('room no') || lowerFirst.includes('no. of chairs') || lowerFirst === 'labs' || lowerFirst === 'science labs') {
           continue;
         }
 
-        if (firstCol.length > 0 && (firstCol.startsWith('G-') || firstCol.startsWith('F-') || firstCol.length >= 2)) {
+        if (firstCol.length > 0 && (firstCol.startsWith('G-') || firstCol.startsWith('F-') || firstCol.startsWith('S-') || firstCol.startsWith('SL-') || firstCol.startsWith('SH-') || firstCol.startsWith('AUD-') || firstCol.length >= 2)) {
           const roomName = firstCol;
-          const chairs = parseInt(row[1]) || (isLabSection ? 40 : 50);
+          let roomType = currentSectionCategory || 'Lecture Hall';
+          
+          if (fifthCol) {
+            const lowerFifth = fifthCol.toLowerCase();
+            if (lowerFifth.includes('science')) roomType = 'Science Lab';
+            else if (lowerFifth.includes('computer')) roomType = 'Computer Lab';
+            else if (lowerFifth.includes('seminar')) roomType = 'Seminar Hall';
+            else if (lowerFifth.includes('auditorium')) roomType = 'Auditorium';
+            else if (lowerFifth.includes('lecture') || lowerFifth.includes('hall')) roomType = 'Lecture Hall';
+          }
+
+          const isLab = roomType === 'Computer Lab' || roomType === 'Science Lab';
+          const chairs = parseInt(row[1]) || (isLab ? 40 : 50);
           const projStr = String(row[2] || '').trim().toLowerCase();
           const hasProj = projStr === 'yes' || projStr === '1' ? 1 : 0;
-          const roomType = isLabSection ? 'Computer Lab' : 'Lecture Hall';
-          const comps = isLabSection ? (parseInt(row[3]) || 40) : 0;
+          const comps = isLab ? (parseInt(row[3]) || (roomType === 'Computer Lab' ? 40 : 10)) : 0;
 
           let existingRoom = await get('SELECT * FROM rooms WHERE room_name = ?', [roomName]);
           if (!existingRoom) {
@@ -289,9 +361,16 @@ router.post('/excel', isAuthenticated, upload.single('file'), async (req, res) =
     let defaultCourseId = allCourses[0] ? allCourses[0].id : 1;
     let defaultInstId = allInst[0] ? allInst[0].id : 1;
 
-    // Step 3: Parse Timetable Matrix Sheets (Sheets named after room, e.g. "G-10", "G-11")
+    // Step 3: Parse Timetable Matrix Sheets (Sheets named after room, e.g. "G-10", "G-05", "SL-01")
     for (let sIdx = 1; sIdx < workbook.SheetNames.length; sIdx++) {
       const sheetName = workbook.SheetNames[sIdx].trim();
+      const lowerName = sheetName.toLowerCase();
+      
+      // Skip guide or spec sheets
+      if (lowerName.includes('guide') || lowerName.includes('pattern') || lowerName.includes('specs') || lowerName.includes('instruction') || lowerName.includes('help')) {
+        continue;
+      }
+
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
