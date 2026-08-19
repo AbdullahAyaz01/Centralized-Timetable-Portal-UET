@@ -98,7 +98,7 @@ async function switchMainView(viewId, navElem) {
 
   const pageHeader = document.getElementById('pageHeaderTitle');
   if (pageHeader) {
-    if (viewId === 'viewDashboard') pageHeader.innerHTML = '<i class="fa-solid fa-chart-line" style="color:var(--uet-green); margin-right:8px;"></i> Campus Resource Utilization';
+    if (viewId === 'viewDashboard') pageHeader.innerHTML = '<i class="fa-solid fa-chart-line" style="color:var(--uet-green); margin-right:6px;"></i> Resource Utilization';
     else if (viewId === 'viewDeptsTree') pageHeader.innerHTML = '<i class="fa-solid fa-building-columns" style="color:var(--uet-green); margin-right:8px;"></i> Department Hierarchy';
     else if (viewId === 'viewTimetable') pageHeader.innerHTML = '<i class="fa-solid fa-calendar-days" style="color:var(--uet-green); margin-right:8px;"></i> Centralized Timetable';
     else if (viewId === 'viewExcelImport') pageHeader.innerHTML = '<i class="fa-solid fa-file-excel" style="color:var(--uet-green); margin-right:8px;"></i> Room View Importer';
