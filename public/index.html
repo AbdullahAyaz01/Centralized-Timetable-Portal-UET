@@ -23,7 +23,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=20260818_v5">
 </head>
 
 <body>
@@ -92,6 +92,9 @@
 
   </section>
 
+  <!-- Global Department Datalist for Combo-Box Search & Dropdown Selection -->
+  <datalist id="departmentsDatalist"></datalist>
+
   <!-- AUTHENTICATED DASHBOARD LAYOUT (Appears ONLY when logged in) -->
   <div class="uet-layout" id="authenticatedLayout" style="display: none;">
 
@@ -114,64 +117,63 @@
       <!-- Navigation Menu Links -->
       <nav class="sidebar-nav">
         <ul>
-          <li class="nav-item active" id="navDashboard" onclick="switchMainView('viewDashboard', this)">
-            <a href="javascript:void(0)"><i class="fa-solid fa-chart-line"></i> <span>Campus Resource
-                Utilization</span></a>
+          <li class="nav-item active" id="navDashboard" onclick="switchMainView('viewDashboard', this)" title="Campus Resource Utilization">
+            <a href="javascript:void(0)"><i class="fa-solid fa-chart-line"></i> <span>Campus Resource Utilization</span></a>
           </li>
-          <li class="nav-item" id="navDepts" onclick="switchMainView('viewDeptsTree', this)">
+          <li class="nav-item" id="navDepts" onclick="switchMainView('viewDeptsTree', this)" title="Departments">
             <a href="javascript:void(0)"><i class="fa-solid fa-building-columns"></i> <span>Departments</span></a>
           </li>
-          <li class="nav-item" id="navTimetable" onclick="switchMainView('viewTimetable', this)">
+          <li class="nav-item" id="navTimetable" onclick="switchMainView('viewTimetable', this)" title="Timetable">
             <a href="javascript:void(0)"><i class="fa-solid fa-calendar-days"></i> <span>Timetable</span></a>
           </li>
-          <li class="nav-item" id="navImport" onclick="switchMainView('viewExcelImport', this)">
+          <li class="nav-item" id="navImport" onclick="switchMainView('viewExcelImport', this)" title="Update Room View">
             <a href="javascript:void(0)"><i class="fa-solid fa-file-excel"></i> <span>Update Room View</span></a>
           </li>
-          <li class="nav-item" id="navRooms" onclick="switchMainView('viewRoomsManager', this)">
+          <li class="nav-item" id="navRooms" onclick="switchMainView('viewRoomsManager', this)" title="Rooms Manager">
             <a href="javascript:void(0)"><i class="fa-solid fa-door-open"></i> <span>Rooms Manager</span></a>
           </li>
-          <li class="nav-item" id="navRequests" onclick="switchMainView('viewRoomRequests', this)">
+          <li class="nav-item" id="navRequests" onclick="switchMainView('viewRoomRequests', this)" title="Room Requests">
             <a href="javascript:void(0)">
               <i class="fa-solid fa-paper-plane"></i> <span>Room Requests</span>
               <span class="badge bg-purple" id="pendingRequestsBadge" style="display:none; margin-left: auto;">0</span>
             </a>
           </li>
           <li class="nav-item" id="navAdminCreds" style="display: none;"
-            onclick="switchMainView('viewAdminCreds', this)">
-            <a href="javascript:void(0)"><i class="fa-solid fa-user-shield"></i> <span>Coordinator Passwords</span></a>
+            onclick="switchMainView('viewAdminCreds', this)" title="Coordinator Management">
+            <a href="javascript:void(0)"><i class="fa-solid fa-user-shield"></i> <span>Coordinator Management</span></a>
           </li>
-          <li class="nav-item" id="navSettings" onclick="switchMainView('viewSettings', this)">
+          <li class="nav-item" id="navSettings" onclick="switchMainView('viewSettings', this)" title="Settings">
             <a href="javascript:void(0)"><i class="fa-solid fa-gear"></i> <span>Settings</span></a>
           </li>
         </ul>
-
-        <div class="sidebar-footer">
-          <button class="btn-sidebar-logout" onclick="handleLogout()">
-            <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
-          </button>
-        </div>
       </nav>
     </aside>
 
     <!-- Right Content Area -->
     <div class="uet-content-wrapper">
 
-      <!-- Top Header Navbar -->
+      <!-- Top Header Navbar (3-Part Responsive System) -->
       <header class="uet-header no-print">
+        <!-- 1. Left Area: Sidebar Toggle & Dynamic Page Title -->
         <div class="header-left">
-          <button class="btn-sidebar-toggle" onclick="toggleSidebar()">
+          <button class="btn-sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
             <i class="fa-solid fa-bars"></i>
           </button>
-          <h1 class="header-title" id="pageHeaderTitle">Campus Resource Utilization</h1>
+          <h1 class="header-title" id="pageHeaderTitle">
+            <i class="fa-solid fa-chart-line" style="color:var(--uet-green); margin-right:8px;"></i> Campus Resource Utilization
+          </h1>
         </div>
 
-        <!-- Header Actions: Search, Profile -->
-        <div class="header-right">
+        <!-- 2. Center Area: Global Search Box (Centered) -->
+        <div class="header-center">
           <div class="header-search">
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" id="globalSearchInput" placeholder="Search room or course..." oninput="handleSearch()">
           </div>
+        </div>
 
+        <!-- 3. Right Area: User Profile Menu ONLY -->
+        <div class="header-right">
           <div class="user-profile-menu" id="userProfileContainer">
             <!-- Rendered by auth.js -->
           </div>
@@ -194,460 +196,502 @@
         <!-- VIEW 1: CAMPUS RESOURCE UTILIZATION OVERVIEW -->
         <section id="viewDashboard" class="main-view active">
 
-          <!-- Requirement 2: Complete Campus Summary Cards Grid -->
-          <div class="section-title-wrap mb-3">
-            <h2><i class="fa-solid fa-chart-pie" style="color: var(--primary-color);"></i> Campus Resource Summary</h2>
-            <span class="text-muted text-sm">Real-time overview of departments, facilities, equipment, and faculty
-              members across UET KSK Campus.</span>
-          </div>
-
-          <div class="stat-cards-grid stat-cards-6">
-            <div class="stat-card">
-              <div class="stat-icon bg-green"><i class="fa-solid fa-building-columns"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statDeptCount">0</span>
-                <span class="stat-label">Departments</span>
-              </div>
-            </div>
-
-            <div class="stat-card">
-              <div class="stat-icon bg-blue"><i class="fa-solid fa-door-closed"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statTotalRoomsCount">0</span>
-                <span class="stat-label">Total Rooms</span>
-              </div>
-            </div>
-
-            <div class="stat-card">
-              <div class="stat-icon bg-orange"><i class="fa-solid fa-flask"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statLabCount">0</span>
-                <span class="stat-label">Laboratories</span>
-              </div>
-            </div>
-
-            <div class="stat-card">
-              <div class="stat-icon bg-purple"><i class="fa-solid fa-desktop"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statComputerCount">0</span>
-                <span class="stat-label">Computers</span>
-              </div>
-            </div>
-
-            <div class="stat-card">
-              <div class="stat-icon bg-green"><i class="fa-solid fa-video"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statProjectorCount">0</span>
-                <span class="stat-label">Projectors</span>
-              </div>
-            </div>
-
-            <div class="stat-card">
-              <div class="stat-icon bg-teal"><i class="fa-solid fa-user-graduate"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statFacultyCount">0</span>
-                <span class="stat-label">Faculty Members</span>
-              </div>
+          <!-- In-Line Top Navigation Options under Title Bar -->
+          <div class="dashboard-subnav-bar no-print mb-4">
+            <div class="subnav-tabs-wrapper">
+              <button class="subnav-pill active" id="dashTabOverview" onclick="switchDashboardTab('overview', this)">
+                <i class="fa-solid fa-gauge-high"></i> Overview & Resource Distribution
+              </button>
+              <button class="subnav-pill" id="dashTabDepts" onclick="switchDashboardTab('depts', this)">
+                <i class="fa-solid fa-door-open"></i> Department Utilization
+              </button>
+              <button class="subnav-pill" id="dashTabShared" onclick="switchDashboardTab('shared', this)">
+                <i class="fa-solid fa-share-nodes"></i> Inter-Dept Resource Sharing
+              </button>
+              <button class="subnav-pill" id="dashTabFaculty" onclick="switchDashboardTab('faculty', this)">
+                <i class="fa-solid fa-id-card"></i> Faculty Workload & Ranks
+              </button>
+              <button class="subnav-pill" id="dashTabTools" onclick="switchDashboardTab('tools', this)">
+                <i class="fa-solid fa-diagram-project"></i> Hierarchy Tree & Tools
+              </button>
+              <button class="subnav-pill" id="dashTabAll" onclick="switchDashboardTab('all', this)">
+                <i class="fa-solid fa-border-all"></i> Show All Sections
+              </button>
             </div>
           </div>
 
-          <!-- Requirements 11, 12, 13, 14: Campus-Level Overview & Resource Sharing Metrics -->
-          <div class="section-title-wrap mt-4 mb-3">
-            <h2><i class="fa-solid fa-share-nodes" style="color: var(--primary-color);"></i> Campus Resource Sharing &
-              Inter-Departmental Overview</h2>
-            <span class="text-muted text-sm">Consolidated campus metrics comparing shared vs independently allocated
-              resources and inter-departmental support.</span>
-          </div>
-
-          <div class="stat-cards-grid stat-cards-4 mb-4">
-            <div class="stat-card">
-              <div class="stat-icon bg-purple"><i class="fa-solid fa-arrows-split-up-and-left"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statSharedResourcePct">0%</span>
-                <span class="stat-label">Shared Resource Util. (Req 11)</span>
-              </div>
+          <!-- TAB PANEL 1: OVERVIEW & RESOURCE DISTRIBUTION -->
+          <div id="panelOverview" class="dash-tab-panel active">
+            <!-- Requirement 2: Complete Campus Summary Cards Grid -->
+            <div class="section-title-wrap mb-3">
+              <h2><i class="fa-solid fa-chart-pie" style="color: var(--primary-color);"></i> Campus Resource Summary</h2>
+              <span class="text-muted text-sm">Real-time overview of departments, facilities, equipment, and faculty
+                members across UET KSK Campus.</span>
             </div>
 
-            <div class="stat-card">
-              <div class="stat-icon bg-blue"><i class="fa-solid fa-lock"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statIndependentResourcePct">0%</span>
-                <span class="stat-label">Independent Resource Util. (Req 12)</span>
+            <div class="stat-cards-grid stat-cards-6 mb-4">
+              <div class="stat-card">
+                <div class="stat-icon bg-green"><i class="fa-solid fa-building-columns"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statDeptCount">0</span>
+                  <span class="stat-label">Departments</span>
+                </div>
               </div>
-            </div>
 
-            <div class="stat-card">
-              <div class="stat-icon bg-teal"><i class="fa-solid fa-handshake-angle"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statInterDeptSupportPct">0%</span>
-                <span class="stat-label">Inter-Dept Sharing Slots (Req 13)</span>
+              <div class="stat-card">
+                <div class="stat-icon bg-blue"><i class="fa-solid fa-door-closed"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statTotalRoomsCount">0</span>
+                  <span class="stat-label">Total Rooms</span>
+                </div>
               </div>
-            </div>
 
-            <div class="stat-card">
-              <div class="stat-icon bg-green"><i class="fa-solid fa-circle-check"></i></div>
-              <div class="stat-info">
-                <span class="stat-value" id="statGreenAvailablePct">100%</span>
-                <span class="stat-label">Full Availability (Req 15)</span>
+              <div class="stat-card">
+                <div class="stat-icon bg-orange"><i class="fa-solid fa-flask"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statLabCount">0</span>
+                  <span class="stat-label">Laboratories</span>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Requirements 4, 9, 10: Department-Wise Graphical Charts & Utilization Percentages -->
-          <div class="charts-grid-wrapper mt-4">
-            <div class="card glass-card chart-card">
-              <div class="card-header border-b">
-                <h3><i class="fa-solid fa-chart-column" style="color:#006633;"></i> Department-Wise Resource Allocation
-                </h3>
-                <span class="badge bg-green" id="badgeGlobalResourceUtil">100% Active</span>
+              <div class="stat-card">
+                <div class="stat-icon bg-purple"><i class="fa-solid fa-desktop"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statComputerCount">0</span>
+                  <span class="stat-label">Computers</span>
+                </div>
               </div>
-              <div class="card-body">
-                <div class="chart-container">
-                  <canvas id="chartDeptResources"></canvas>
+
+              <div class="stat-card">
+                <div class="stat-icon bg-green"><i class="fa-solid fa-video"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statProjectorCount">0</span>
+                  <span class="stat-label">Projectors</span>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon bg-teal"><i class="fa-solid fa-user-graduate"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statFacultyCount">0</span>
+                  <span class="stat-label">Faculty Members</span>
                 </div>
               </div>
             </div>
 
-            <div class="card glass-card chart-card">
-              <div class="card-header border-b">
-                <h3><i class="fa-solid fa-chart-line" style="color:#2563eb;"></i> Department Utilization & Occupancy (%)
-                </h3>
-                <span class="badge bg-blue" id="badgeAvgOccupancy">0% Avg Occupancy</span>
+            <!-- Integrated Overview Charts Grid -->
+            <div class="charts-grid-wrapper mt-4 mb-4">
+              <div class="card glass-card chart-card">
+                <div class="card-header border-b">
+                  <h3><i class="fa-solid fa-chart-column" style="color:#006633;"></i> Department-Wise Resource Allocation</h3>
+                  <span class="badge bg-green" id="badgeGlobalResourceUtil">100% Active</span>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="chartDeptResources"></canvas>
+                  </div>
+                </div>
               </div>
-              <div class="card-body">
-                <div class="chart-container">
-                  <canvas id="chartDeptUtilization"></canvas>
+
+              <div class="card glass-card chart-card">
+                <div class="card-header border-b">
+                  <h3><i class="fa-solid fa-chart-pie" style="color:#ea580c;"></i> Campus Room Categories Breakdown</h3>
+                  <span class="badge bg-orange" id="badgeRoomTypeRatio">Classrooms vs Labs</span>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="chartRoomTypes"></canvas>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </div> <!-- END PANEL OVERVIEW -->
 
-          <div class="charts-grid-wrapper mt-4">
-            <div class="card glass-card chart-card">
-              <div class="card-header border-b">
-                <h3><i class="fa-solid fa-chart-pie" style="color:#7c3aed;"></i> Shared vs Independent Resource
-                  Allocation</h3>
-                <span class="badge bg-purple" id="badgeSharedVsIndependent">Shared vs Dedicated</span>
+          <!-- TAB PANEL 2: DEPARTMENT UTILIZATION -->
+          <div id="panelDepts" class="dash-tab-panel">
+            <div class="section-title-wrap mb-3">
+              <h2><i class="fa-solid fa-door-open" style="color: var(--primary-color);"></i> Total Campus Rooms & Department Utilization</h2>
+              <span class="text-muted text-sm">Visual metrics and live occupancy tracking for rooms and laboratories per department.</span>
+            </div>
+
+            <!-- Integrated Department Utilization Charts Grid -->
+            <div class="charts-grid-wrapper mt-3 mb-4">
+              <div class="card glass-card chart-card">
+                <div class="card-header border-b">
+                  <h3><i class="fa-solid fa-chart-line" style="color:#2563eb;"></i> Department Utilization & Occupancy (%)</h3>
+                  <span class="badge bg-blue" id="badgeAvgOccupancy">0% Avg Occupancy</span>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="chartDeptUtilization"></canvas>
+                  </div>
+                </div>
               </div>
-              <div class="card-body">
-                <div class="chart-container">
-                  <canvas id="chartSharedVsIndependent"></canvas>
+
+              <div class="card glass-card chart-card">
+                <div class="card-header border-b">
+                  <h3><i class="fa-solid fa-chart-pie" style="color:#7c3aed;"></i> Shared vs Independent Resource Allocation</h3>
+                  <span class="badge bg-purple" id="badgeSharedVsIndependent">Shared vs Dedicated</span>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="chartSharedVsIndependent"></canvas>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="card glass-card chart-card">
+            <!-- Requirement 3: Total Number of Rooms & Utilization Status per Department -->
+            <div class="card glass-card mb-4">
               <div class="card-header border-b">
-                <h3><i class="fa-solid fa-chart-bar" style="color:#0891b2;"></i> Inter-Departmental Resource Support
-                </h3>
+                <div>
+                  <h2><i class="fa-solid fa-table-list" style="color: var(--primary-color);"></i> Department Utilization Status Table</h2>
+                  <p class="text-muted text-sm">Breakdown of available rooms across each department, active scheduled slots, and calculated utilization percentages.</p>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="uet-table" id="tableDeptRoomsUtilization">
+                    <thead>
+                      <tr>
+                        <th>Department Name</th>
+                        <th>Total Rooms</th>
+                        <th>Classrooms</th>
+                        <th>Laboratories</th>
+                        <th>Computers</th>
+                        <th>Projectors</th>
+                        <th>Active Timetable Slots</th>
+                        <th>Utilization %</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbodyDeptRoomsUtilization">
+                      <!-- Rendered dynamically by app.js -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Requirement 5: Comprehensive Department Statistics Cards -->
+            <div class="mt-4">
+              <div class="section-title-wrap mb-3">
+                <h2><i class="fa-solid fa-layer-group" style="color: var(--primary-color);"></i> Department Statistics & Resource Management</h2>
+                <span class="text-muted text-sm">Detailed overview of rooms, laboratories, equipment, and faculty members per department.</span>
+              </div>
+
+              <div class="dept-stats-cards-grid" id="deptStatsCardsContainer">
+                <!-- Rendered dynamically by app.js -->
+              </div>
+            </div>
+          </div> <!-- END PANEL DEPTS -->
+
+          <!-- TAB PANEL 3: INTER-DEPARTMENTAL RESOURCE SHARING -->
+          <div id="panelShared" class="dash-tab-panel">
+            <div class="section-title-wrap mb-3">
+              <h2><i class="fa-solid fa-share-nodes" style="color: var(--primary-color);"></i> Campus Resource Sharing & Inter-Departmental Support</h2>
+              <span class="text-muted text-sm">Consolidated campus metrics comparing shared vs independently allocated resources and cross-departmental room support.</span>
+            </div>
+
+            <div class="stat-cards-grid stat-cards-4 mb-4">
+              <div class="stat-card">
+                <div class="stat-icon bg-purple"><i class="fa-solid fa-arrows-split-up-and-left"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statSharedResourcePct">0%</span>
+                  <span class="stat-label">Shared Resource Util.</span>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon bg-blue"><i class="fa-solid fa-lock"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statIndependentResourcePct">0%</span>
+                  <span class="stat-label">Independent Resource Util.</span>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon bg-teal"><i class="fa-solid fa-handshake-angle"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statInterDeptSupportPct">0%</span>
+                  <span class="stat-label">Inter-Dept Sharing Slots</span>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon bg-green"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="stat-info">
+                  <span class="stat-value" id="statGreenAvailablePct">100%</span>
+                  <span class="stat-label">Full Availability</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Integrated Inter-Departmental Support Chart Card -->
+            <div class="card glass-card chart-card mb-4">
+              <div class="card-header border-b">
+                <h3><i class="fa-solid fa-chart-bar" style="color:#0891b2;"></i> Inter-Departmental Resource Support Matrix</h3>
                 <span class="badge bg-teal" id="badgeInterDeptSupport">Cross-Dept Support</span>
               </div>
               <div class="card-body">
-                <div class="chart-container">
+                <div class="chart-container" style="height: 340px;">
                   <canvas id="chartInterDeptSupport"></canvas>
                 </div>
               </div>
             </div>
-          </div>
+          </div> <!-- END PANEL SHARED -->
 
-          <div class="charts-grid-wrapper mt-4">
-            <div class="card glass-card chart-card">
+          <!-- TAB PANEL 4: FACULTY STATISTICS & WORKLOAD -->
+          <div id="panelFaculty" class="dash-tab-panel">
+            <div class="section-title-wrap mb-3">
+              <h2><i class="fa-solid fa-id-card" style="color: var(--primary-color);"></i> Faculty Statistics & Workload Analytics</h2>
+              <span class="text-muted text-sm">Faculty rank distributions, official CS directory data, and teaching workload capacity tracking.</span>
+            </div>
+
+            <!-- Integrated Faculty Designation Chart Card -->
+            <div class="card glass-card chart-card mb-4">
               <div class="card-header border-b">
                 <h3><i class="fa-solid fa-users" style="color:#7c3aed;"></i> Faculty Designation Ranks Breakdown</h3>
                 <span class="badge bg-purple" id="badgeTotalFacultyRanks">7 Designations</span>
               </div>
               <div class="card-body">
-                <div class="chart-container">
+                <div class="chart-container" style="height: 280px;">
                   <canvas id="chartFacultyRanks"></canvas>
                 </div>
               </div>
             </div>
 
-            <div class="card glass-card chart-card">
-              <div class="card-header border-b">
-                <h3><i class="fa-solid fa-chart-pie" style="color:#ea580c;"></i> Campus Room Categories Breakdown</h3>
-                <span class="badge bg-orange" id="badgeRoomTypeRatio">Classrooms vs Labs</span>
+            <!-- Requirements 6 & 7: Faculty Statistics & Computer Science Faculty Data -->
+            <div class="card glass-card mb-4">
+              <div class="card-header border-b flex-between">
+                <div>
+                  <h2><i class="fa-solid fa-users-viewfinder" style="color: var(--primary-color);"></i> Faculty Ranks & Member Directory</h2>
+                  <p class="text-muted text-sm">Total faculty members across all 7 academic ranks (Professors, Associate Professors, Assistant Professors, Lecturers, Teaching Fellows, Graduate Assistants, Teaching Assistants).</p>
+                </div>
+                <button class="btn btn-primary" id="btnAddFacultyBtn" style="display: none;" onclick="openFacultyModal()">
+                  <i class="fa-solid fa-user-plus"></i> Add Faculty Member
+                </button>
               </div>
               <div class="card-body">
-                <div class="chart-container">
-                  <canvas id="chartRoomTypes"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Requirement 3: Total Number of Rooms & Utilization Status per Department -->
-          <div class="card glass-card mt-4">
-            <div class="card-header border-b">
-              <div>
-                <h2><i class="fa-solid fa-door-open" style="color: var(--primary-color);"></i> Total Campus Rooms &
-                  Department Utilization Status</h2>
-                <p class="text-muted text-sm">Breakdown of available rooms across each department, active scheduled
-                  slots, and calculated utilization percentages.</p>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="uet-table" id="tableDeptRoomsUtilization">
-                  <thead>
-                    <tr>
-                      <th>Department Name</th>
-                      <th>Total Rooms</th>
-                      <th>Classrooms</th>
-                      <th>Laboratories</th>
-                      <th>Computers</th>
-                      <th>Projectors</th>
-                      <th>Active Timetable Slots</th>
-                      <th>Utilization %</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyDeptRoomsUtilization">
-                    <!-- Rendered dynamically by app.js -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
 
-          <!-- Requirement 5: Comprehensive Department Statistics Cards -->
-          <div class="mt-5">
-            <div class="section-title-wrap mb-3">
-              <h2><i class="fa-solid fa-layer-group" style="color: var(--primary-color);"></i> Department Statistics &
-                Resource Management</h2>
-              <span class="text-muted text-sm">Detailed overview of rooms, laboratories, equipment, and faculty members
-                per department.</span>
-            </div>
 
-            <div class="dept-stats-cards-grid" id="deptStatsCardsContainer">
-              <!-- Rendered dynamically by app.js -->
-            </div>
-          </div>
+                <!-- 7 Ranks Badges Grid -->
+                <div class="faculty-ranks-grid">
+                  <div class="rank-badge-card rank-prof">
+                    <div class="rank-icon"><i class="fa-solid fa-user-tie"></i></div>
+                    <div class="rank-data">
+                      <span class="rank-count" id="statProfessorsCount">0</span>
+                      <span class="rank-label">Professors</span>
+                    </div>
+                  </div>
 
-          <!-- Requirements 6 & 7: Faculty Statistics & Computer Science Faculty Data -->
-          <div class="card glass-card mt-5 mb-4">
-            <div class="card-header border-b flex-between">
-              <div>
-                <h2><i class="fa-solid fa-id-card" style="color: var(--primary-color);"></i> Faculty Statistics by
-                  Designation</h2>
-                <p class="text-muted text-sm">Total faculty members across all 7 academic ranks (Professors, Associate
-                  Professors, Assistant Professors, Lecturers, Teaching Fellows, Graduate Assistants, Teaching
-                  Assistants).</p>
-              </div>
-              <button class="btn btn-primary" id="btnAddFacultyBtn" style="display: none;" onclick="openFacultyModal()">
-                <i class="fa-solid fa-user-plus"></i> Add Faculty Member
-              </button>
-            </div>
-            <div class="card-body">
+                  <div class="rank-badge-card rank-assoc">
+                    <div class="rank-icon"><i class="fa-solid fa-user-gear"></i></div>
+                    <div class="rank-data">
+                      <span class="rank-count" id="statAssocProfCount">0</span>
+                      <span class="rank-label">Associate Professors</span>
+                    </div>
+                  </div>
 
-              <!-- CS Faculty Reference Badge -->
-              <div class="cs-faculty-reference-box mb-4">
-                <div class="cs-ref-icon"><i class="fa-solid fa-globe"></i></div>
-                <div class="cs-ref-info">
-                  <strong>Official Reference Data (Computer Science):</strong>
-                  <span>Faculty statistics for Computer Science are aligned with the official CS faculty portal at <a
-                      href="https://csksk.uet.edu.pk/faculty/" target="_blank"
-                      rel="noopener">https://csksk.uet.edu.pk/faculty/</a> (Total CS Faculty: <strong
-                      id="statCsFacultyTotal">27</strong> members).</span>
-                </div>
-              </div>
+                  <div class="rank-badge-card rank-asst">
+                    <div class="rank-icon"><i class="fa-solid fa-user-doctor"></i></div>
+                    <div class="rank-data">
+                      <span class="rank-count" id="statAsstProfCount">0</span>
+                      <span class="rank-label">Assistant Professors</span>
+                    </div>
+                  </div>
 
-              <!-- 7 Ranks Badges Grid -->
-              <div class="faculty-ranks-grid">
-                <div class="rank-badge-card rank-prof">
-                  <div class="rank-icon"><i class="fa-solid fa-user-tie"></i></div>
-                  <div class="rank-data">
-                    <span class="rank-count" id="statProfessorsCount">0</span>
-                    <span class="rank-label">Professors</span>
+                  <div class="rank-badge-card rank-lecturer">
+                    <div class="rank-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <div class="rank-data">
+                      <span class="rank-count" id="statLecturersCount">0</span>
+                      <span class="rank-label">Lecturers</span>
+                    </div>
+                  </div>
+
+                  <div class="rank-badge-card rank-tf">
+                    <div class="rank-icon"><i class="fa-solid fa-user-graduate"></i></div>
+                    <div class="rank-data">
+                      <span class="rank-count" id="statTeachingFellowsCount">0</span>
+                      <span class="rank-label">Teaching Fellows</span>
+                    </div>
+                  </div>
+
+                  <div class="rank-badge-card rank-ga">
+                    <div class="rank-icon"><i class="fa-solid fa-book-open-reader"></i></div>
+                    <div class="rank-data">
+                      <span class="rank-count" id="statGradAsstCount">0</span>
+                      <span class="rank-label">Graduate Assistants</span>
+                    </div>
+                  </div>
+
+                  <div class="rank-badge-card rank-ta">
+                    <div class="rank-icon"><i class="fa-solid fa-hand-holding-hand"></i></div>
+                    <div class="rank-data">
+                      <span class="rank-count" id="statTeachAsstCount">0</span>
+                      <span class="rank-label">Teaching Assistants</span>
+                    </div>
                   </div>
                 </div>
 
-                <div class="rank-badge-card rank-assoc">
-                  <div class="rank-icon"><i class="fa-solid fa-user-gear"></i></div>
-                  <div class="rank-data">
-                    <span class="rank-count" id="statAssocProfCount">0</span>
-                    <span class="rank-label">Associate Professors</span>
+                <!-- Faculty Table Filter & Search -->
+                <div class="faculty-filter-bar mt-4 mb-3">
+                  <div class="form-group mb-0" style="flex:1; max-width: 320px;">
+                    <input type="text" id="facultySearchInput" placeholder="Search faculty member name or email..."
+                      oninput="renderFacultyTable()">
+                  </div>
+                  <div class="form-group mb-0" style="flex:1; max-width: 280px;">
+                    <select id="facultyDeptFilter" onchange="renderFacultyTable()">
+                      <option value="">All Departments</option>
+                    </select>
+                  </div>
+                  <div class="form-group mb-0" style="flex:1; max-width: 250px;">
+                    <select id="facultyDesigFilter" onchange="renderFacultyTable()">
+                      <option value="">All Designations</option>
+                      <option value="Professor">Professor</option>
+                      <option value="Associate Professor">Associate Professor</option>
+                      <option value="Assistant Professor">Assistant Professor</option>
+                      <option value="Lecturer">Lecturer</option>
+                      <option value="Teaching Fellow">Teaching Fellow</option>
+                      <option value="Graduate Assistant">Graduate Assistant</option>
+                      <option value="Teaching Assistant">Teaching Assistant</option>
+                    </select>
                   </div>
                 </div>
 
-                <div class="rank-badge-card rank-asst">
-                  <div class="rank-icon"><i class="fa-solid fa-user-doctor"></i></div>
-                  <div class="rank-data">
-                    <span class="rank-count" id="statAsstProfCount">0</span>
-                    <span class="rank-label">Assistant Professors</span>
-                  </div>
+                <!-- Faculty Members Table -->
+                <div class="table-responsive">
+                  <table class="uet-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Faculty Member Name</th>
+                        <th>Official Email</th>
+                        <th>Designation</th>
+                        <th>Department</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbodyFacultyList">
+                      <!-- Rendered dynamically by app.js -->
+                    </tbody>
+                  </table>
                 </div>
 
-                <div class="rank-badge-card rank-lecturer">
-                  <div class="rank-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
-                  <div class="rank-data">
-                    <span class="rank-count" id="statLecturersCount">0</span>
-                    <span class="rank-label">Lecturers</span>
-                  </div>
-                </div>
-
-                <div class="rank-badge-card rank-tf">
-                  <div class="rank-icon"><i class="fa-solid fa-user-graduate"></i></div>
-                  <div class="rank-data">
-                    <span class="rank-count" id="statTeachingFellowsCount">0</span>
-                    <span class="rank-label">Teaching Fellows</span>
-                  </div>
-                </div>
-
-                <div class="rank-badge-card rank-ga">
-                  <div class="rank-icon"><i class="fa-solid fa-book-open-reader"></i></div>
-                  <div class="rank-data">
-                    <span class="rank-count" id="statGradAsstCount">0</span>
-                    <span class="rank-label">Graduate Assistants</span>
-                  </div>
-                </div>
-
-                <div class="rank-badge-card rank-ta">
-                  <div class="rank-icon"><i class="fa-solid fa-hand-holding-hand"></i></div>
-                  <div class="rank-data">
-                    <span class="rank-count" id="statTeachAsstCount">0</span>
-                    <span class="rank-label">Teaching Assistants</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Faculty Table Filter & Search -->
-              <div class="faculty-filter-bar mt-4 mb-3">
-                <div class="form-group mb-0" style="flex:1; max-width: 320px;">
-                  <input type="text" id="facultySearchInput" placeholder="Search faculty member name or email..."
-                    oninput="renderFacultyTable()">
-                </div>
-                <div class="form-group mb-0" style="flex:1; max-width: 280px;">
-                  <select id="facultyDeptFilter" onchange="renderFacultyTable()">
-                    <option value="">All Departments</option>
-                  </select>
-                </div>
-                <div class="form-group mb-0" style="flex:1; max-width: 250px;">
-                  <select id="facultyDesigFilter" onchange="renderFacultyTable()">
-                    <option value="">All Designations</option>
-                    <option value="Professor">Professor</option>
-                    <option value="Associate Professor">Associate Professor</option>
-                    <option value="Assistant Professor">Assistant Professor</option>
-                    <option value="Lecturer">Lecturer</option>
-                    <option value="Teaching Fellow">Teaching Fellow</option>
-                    <option value="Graduate Assistant">Graduate Assistant</option>
-                    <option value="Teaching Assistant">Teaching Assistant</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Faculty Members Table -->
-              <div class="table-responsive">
-                <table class="uet-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Faculty Member Name</th>
-                      <th>Official Email</th>
-                      <th>Designation</th>
-                      <th>Department</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyFacultyList">
-                    <!-- Rendered dynamically by app.js -->
-                  </tbody>
-                </table>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Requirements 19, 20, 21: Faculty / Teacher Workload & Utilization Module -->
-          <div class="card glass-card mt-4 mb-4">
-            <div class="card-header border-b flex-between">
-              <div>
-                <h2><i class="fa-solid fa-chalkboard-user" style="color: var(--primary-color);"></i> Teacher Utilization
-                  & Teaching Workload Module</h2>
-                <p class="text-muted text-sm">Calculates faculty teaching workload based on assigned schedule slots,
-                  credit hours, and target capacity using consistent Green (100% Available), Yellow (Moderate Load), and
-                  Red (100% Full Workload) status indicators.</p>
-              </div>
-              <span class="badge bg-green" id="badgeAvgFacultyUtilization">0% Avg Faculty Load</span>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="uet-table" id="tableFacultyWorkload">
-                  <thead>
-                    <tr>
-                      <th>Faculty Member Name</th>
-                      <th>Designation</th>
-                      <th>Department</th>
-                      <th>Assigned Courses</th>
-                      <th>Credit Hours</th>
-                      <th>Target Load</th>
-                      <th>Workload Utilization %</th>
-                      <th>Status (Req 15-18)</th>
-                      <th>Contact Details</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyFacultyWorkload">
-                    <!-- Rendered dynamically by app.js -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Navigation Tree & Tools -->
-          <div class="dashboard-split-grid mt-4">
-            <div class="card glass-card">
-              <div class="card-header">
-                <h3><i class="fa-solid fa-building-columns"></i> Department & Room Navigation Tree</h3>
-                <span class="text-muted text-sm">Click [+] to expand rooms & view room timetable</span>
-              </div>
-              <div class="card-body">
-                <div id="dashboardDeptTree" class="dept-tree-container">
-                  <!-- Rendered dynamically -->
-                </div>
               </div>
             </div>
 
-            <div class="card glass-card">
-              <div class="card-header">
-                <h3><i class="fa-solid fa-bolt"></i> Quick Tools & Room Finder</h3>
+            <!-- Requirements 19, 20, 21: Faculty / Teacher Workload & Utilization Module -->
+            <div class="card glass-card mt-4 mb-4">
+              <div class="card-header border-b flex-between">
+                <div>
+                  <h2><i class="fa-solid fa-chalkboard-user" style="color: var(--primary-color);"></i> Teacher Utilization & Teaching Workload Module</h2>
+                  <p class="text-muted text-sm">Calculates faculty teaching workload based on assigned schedule slots, credit hours, and target capacity using consistent Green (100% Available), Yellow (Moderate Load), and Red (100% Full Workload) status indicators.</p>
+                </div>
+                <span class="badge bg-green" id="badgeAvgFacultyUtilization">0% Avg Faculty Load</span>
               </div>
-              <div class="card-body">
-                <div class="action-buttons-stack">
-                  <button class="btn btn-primary btn-full" onclick="openRoomFinderModal()">
-                    <i class="fa-solid fa-door-open"></i> Search Free / Vacant Rooms
-                  </button>
-                  <button class="btn btn-secondary btn-full" id="btnDashboardExcelImport"
-                    onclick="switchMainView('viewExcelImport', document.getElementById('navImport'))">
-                    <i class="fa-solid fa-file-excel"></i> Update Room View Sheet
-                  </button>
-                  <button class="btn btn-accent btn-full" id="btnDashboardAddSlot" style="display: none;"
-                    onclick="openAddSlotModal()">
-                    <i class="fa-solid fa-plus-circle"></i> Add Schedule Slot
-                  </button>
+              <div class="card-body p-0">
+                <!-- Teacher Workload Filter Bar -->
+                <div class="faculty-filter-bar p-3" style="border-bottom: 1px solid var(--border-color); background: rgba(248, 250, 252, 0.6); display: flex; gap: 12px; flex-wrap: wrap;">
+                  <div class="form-group mb-0" style="flex:1; min-width: 220px; max-width: 320px;">
+                    <input type="text" id="workloadSearchInput" placeholder="Search teacher name or course..." oninput="renderFacultyWorkloadTable()">
+                  </div>
+                  <div class="form-group mb-0" style="flex:1; min-width: 180px; max-width: 260px;">
+                    <select id="workloadDeptFilter" onchange="renderFacultyWorkloadTable()">
+                      <option value="">All Departments</option>
+                    </select>
+                  </div>
+                  <div class="form-group mb-0" style="flex:1; min-width: 180px; max-width: 250px;">
+                    <select id="workloadDesigFilter" onchange="renderFacultyWorkloadTable()">
+                      <option value="">All Designations / Ranks</option>
+                      <option value="Professor">Professor</option>
+                      <option value="Associate Professor">Associate Professor</option>
+                      <option value="Assistant Professor">Assistant Professor</option>
+                      <option value="Lecturer">Lecturer</option>
+                      <option value="Teaching Fellow">Teaching Fellow</option>
+                      <option value="Graduate Assistant">Graduate Assistant</option>
+                      <option value="Teaching Assistant">Teaching Assistant</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="uet-table" id="tableFacultyWorkload">
+                    <thead>
+                      <tr>
+                        <th>Faculty Member Name</th>
+                        <th>Designation</th>
+                        <th>Department</th>
+                        <th>Assigned Courses</th>
+                        <th>Credit Hours</th>
+                        <th>Target Load</th>
+                        <th>Workload Utilization %</th>
+                        <th>Status (Req 15-18)</th>
+                        <th>Contact Details</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbodyFacultyWorkload">
+                      <!-- Rendered dynamically by app.js -->
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
-          </div>
+          </div> <!-- END PANEL FACULTY -->
+
+          <!-- TAB PANEL 5: QUICK TOOLS & NAV TREE -->
+          <div id="panelTools" class="dash-tab-panel">
+            <div class="dashboard-split-grid">
+              <div class="card glass-card">
+                <div class="card-header">
+                  <h3><i class="fa-solid fa-building-columns"></i> Department & Room Navigation Tree</h3>
+                  <span class="text-muted text-sm">Click [+] to expand rooms & view room timetable</span>
+                </div>
+                <div class="card-body">
+                  <div id="dashboardDeptTree" class="dept-tree-container">
+                    <!-- Rendered dynamically -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="card glass-card">
+                <div class="card-header">
+                  <h3><i class="fa-solid fa-bolt"></i> Quick Tools & Room Finder</h3>
+                </div>
+                <div class="card-body">
+                  <div class="action-buttons-stack">
+                    <button class="btn btn-primary btn-full" onclick="openRoomFinderModal()">
+                      <i class="fa-solid fa-door-open"></i> Search Free / Vacant Rooms
+                    </button>
+                    <button class="btn btn-secondary btn-full" id="btnDashboardExcelImport"
+                      onclick="switchMainView('viewExcelImport', document.getElementById('navImport'))">
+                      <i class="fa-solid fa-file-excel"></i> Update Room View Sheet
+                    </button>
+                    <button class="btn btn-accent btn-full" id="btnDashboardAddSlot" style="display: none;"
+                      onclick="openAddSlotModal()">
+                      <i class="fa-solid fa-plus-circle"></i> Add Schedule Slot
+                    </button>
+                  </div>
+                </div>
+              </div>
+          </div> <!-- END PANEL TOOLS -->
         </section>
 
         <!-- VIEW 2: DEPARTMENTS & ROOMS TREE VIEW -->
         <section id="viewDeptsTree" class="main-view" style="display: none;">
-          <div class="card glass-card">
-            <div class="card-header border-b">
-              <div>
-                <h2><i class="fa-solid fa-building-columns"></i> Departments & Room Allocation Tree</h2>
-                <p class="text-muted">Expand any department with [+] to see rooms (G-10, G-11, G-16, F-04, G-05, etc.)
-                  and click any room to inspect its weekly timetable.</p>
-              </div>
-              <div class="header-actions">
-                <button class="btn btn-accent" id="btnTreeAddDept" style="display: none;"
-                  onclick="openDeptManagementModal()">
-                  <i class="fa-solid fa-plus"></i> Add New Department
-                </button>
-              </div>
+          <div class="section-title-wrap mb-4">
+            <div>
+              <h2><i class="fa-solid fa-building-columns" style="color: var(--uet-green);"></i> Department Hierarchy & Room Allocation</h2>
+              <span class="text-muted text-sm">Expand any department with [+] to view rooms (G-10, G-11, G-16, F-04, G-05, etc.) and click any room to inspect its weekly timetable.</span>
             </div>
+            <button class="btn btn-accent" id="btnTreeAddDept" style="display: none;" onclick="openDeptManagementModal()">
+              <i class="fa-solid fa-plus"></i> Add New Department
+            </button>
+          </div>
+
+          <div class="card glass-card">
             <div class="card-body">
               <div id="mainDeptTreeContainer" class="dept-tree-container large-tree">
                 <!-- Dynamically rendered collapsible tree view -->
@@ -658,6 +702,13 @@
 
         <!-- VIEW 3: CENTRALIZED TIMETABLE MATRIX -->
         <section id="viewTimetable" class="main-view" style="display: none;">
+          <div class="section-title-wrap mb-4">
+            <div>
+              <h2><i class="fa-solid fa-calendar-days" style="color: var(--uet-green);"></i> Centralized Timetable Master Matrix</h2>
+              <span class="text-muted text-sm">Master weekly academic schedule grid with collision detection, department filters, room view, and print/export tools.</span>
+            </div>
+          </div>
+
           <!-- Control Filter Panel -->
           <div class="control-panel no-print mb-4">
             <div class="filter-group">
@@ -724,6 +775,22 @@
             </div>
           </div>
 
+          <!-- Timetable View Mode Switcher Bar -->
+          <div class="timetable-mode-switcher mb-3 no-print d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 glass-card" style="border-radius: 12px; background: #ffffff; border: 1px solid var(--border-color);">
+            <div id="timetableModeToggleContainer">
+              <button type="button" class="btn btn-sm btn-outline" id="btnToggleTimetableMode" onclick="toggleTimetableMode()">
+                <i class="fa-solid fa-grip-vertical"></i> Switch to Block Heatmap View
+              </button>
+            </div>
+
+            <div class="block-legend-bar d-flex align-items-center gap-3 text-xs flex-wrap" id="blockModeLegend" style="display: none !important;">
+              <span class="d-flex align-items-center gap-1"><span style="width:14px; height:14px; border-radius:4px; display:inline-block; background:#16a34a; border:1px solid #166534;"></span> <strong>Class (Occupied)</strong></span>
+              <span class="d-flex align-items-center gap-1"><span style="width:14px; height:14px; border-radius:4px; display:inline-block; background:#fee2e2; border:1px solid #fca5a5;"></span> <strong>Vacant (No Class)</strong></span>
+              <span class="d-flex align-items-center gap-1"><span style="width:14px; height:14px; border-radius:4px; display:inline-block; background:#d97706; border:1px solid #92400e;"></span> <strong>Lunch Break</strong></span>
+              <span class="d-flex align-items-center gap-1"><span style="width:14px; height:14px; border-radius:4px; display:inline-block; background:#10b981; border:1px solid #059669;"></span> <strong>Jummah Break</strong></span>
+            </div>
+          </div>
+
           <!-- Status Bar -->
           <div class="status-bar mb-3">
             <div id="activeFilterBadge" class="filter-badge-list">
@@ -751,19 +818,17 @@
 
         <!-- VIEW 4: DRAG & DROP EXCEL FILE IMPORTER -->
         <section id="viewExcelImport" class="main-view" style="display: none;">
-          <div class="card glass-card">
-            <div class="card-header border-b">
-              <div>
-                <h2><i class="fa-solid fa-file-excel"></i> Update Room View</h2>
-                <p class="text-muted">Upload your department's room view spreadsheet (`.xlsx` or `.csv`) to
-                  automatically populate schedule slots into the database.</p>
-              </div>
-              <div>
-                <button class="btn btn-success" onclick="downloadExcelTemplate()">
-                  <i class="fa-solid fa-file-excel"></i> Download Pattern Template (.xlsx)
-                </button>
-              </div>
+          <div class="section-title-wrap mb-4">
+            <div>
+              <h2><i class="fa-solid fa-file-excel" style="color: var(--uet-green);"></i> Room View Spreadsheet Importer</h2>
+              <span class="text-muted text-sm">Upload your department's room view spreadsheet (`.xlsx` or `.csv`) to automatically populate schedule slots into the database.</span>
             </div>
+            <button class="btn btn-success" onclick="downloadExcelTemplate()">
+              <i class="fa-solid fa-file-excel"></i> Download Pattern Template (.xlsx)
+            </button>
+          </div>
+
+          <div class="card glass-card">
             <div class="card-body">
 
               <!-- Dropzone Container -->
@@ -800,17 +865,17 @@
 
         <!-- VIEW 5: ROOMS MANAGER PER DEPARTMENT -->
         <section id="viewRoomsManager" class="main-view" style="display: none;">
-          <div class="card glass-card">
-            <div class="card-header border-b">
-              <div>
-                <h2><i class="fa-solid fa-door-open"></i> Department Rooms & Labs Dashboard</h2>
-                <p class="text-muted">Manage classrooms, capacity (chairs count), projector setup, and computer labs for
-                  your department.</p>
-              </div>
-              <button class="btn btn-primary" id="btnAddRoom" onclick="openAddRoomModal()">
-                <i class="fa-solid fa-plus"></i> Add New Room
-              </button>
+          <div class="section-title-wrap mb-4">
+            <div>
+              <h2><i class="fa-solid fa-door-open" style="color: var(--uet-green);"></i> Department Rooms & Laboratories Manager</h2>
+              <span class="text-muted text-sm">Manage classrooms, seating capacity, projector setups, and computer laboratory hardware per academic department.</span>
             </div>
+            <button class="btn btn-primary" id="btnAddRoom" onclick="openAddRoomModal()">
+              <i class="fa-solid fa-plus"></i> Add New Room
+            </button>
+          </div>
+
+          <div class="card glass-card">
             <div class="card-body">
               <div class="form-grid mb-4" id="roomsListGrid">
                 <!-- Rendered dynamically -->
@@ -821,17 +886,17 @@
 
         <!-- VIEW 6: SUPER ADMIN COORDINATOR CREDENTIALS MANAGER -->
         <section id="viewAdminCreds" class="main-view" style="display: none;">
-          <div class="card glass-card">
-            <div class="card-header border-b">
-              <div>
-                <h2><i class="fa-solid fa-user-shield"></i> Master Department Coordinator Credentials</h2>
-                <p class="text-muted">Super Admin dashboard to create departments, assign department heads, and manage
-                  login credentials.</p>
-              </div>
-              <button class="btn btn-accent" onclick="openDeptManagementModal()">
-                <i class="fa-solid fa-building-circle-check"></i> + Add Dept & Coordinator
-              </button>
+          <div class="section-title-wrap mb-4">
+            <div>
+              <h2><i class="fa-solid fa-user-shield" style="color: var(--uet-green);"></i> Coordinator Management</h2>
+              <span class="text-muted text-sm">Super Admin dashboard to manage department coordinators, create departments, assign department heads, and manage access credentials.</span>
             </div>
+            <button class="btn btn-accent" onclick="openDeptManagementModal()">
+              <i class="fa-solid fa-building-circle-check"></i> + Add Dept & Coordinator
+            </button>
+          </div>
+
+          <div class="card glass-card">
             <div class="card-body">
               <div id="adminCredsTableContainer">
                 <!-- Rendered dynamically -->
@@ -842,19 +907,17 @@
 
         <!-- VIEW 7: CROSS-DEPARTMENT ROOM ALLOCATION REQUEST MANAGER -->
         <section id="viewRoomRequests" class="main-view" style="display: none;">
-          <div class="card glass-card">
-            <div class="card-header border-b">
-              <div>
-                <h2><i class="fa-solid fa-paper-plane"></i> Cross-Department Room Allocation Requests</h2>
-                <p class="text-muted">Request vacant classrooms & labs owned by other departments for your class, or
-                  approve incoming requests for your department's rooms.</p>
-              </div>
-              <div>
-                <button class="btn btn-primary" id="btnOpenRequestModal" onclick="openRoomRequestModal()">
-                  <i class="fa-solid fa-plus-circle"></i> Submit Room Request
-                </button>
-              </div>
+          <div class="section-title-wrap mb-4">
+            <div>
+              <h2><i class="fa-solid fa-paper-plane" style="color: var(--uet-green);"></i> Inter-Departmental Room Request Portal</h2>
+              <span class="text-muted text-sm">Request vacant classrooms & labs owned by other departments for your class, or approve incoming requests for your department's rooms.</span>
             </div>
+            <button class="btn btn-primary" id="btnOpenRequestModal" onclick="openRoomRequestModal()">
+              <i class="fa-solid fa-plus-circle"></i> Submit Room Request
+            </button>
+          </div>
+
+          <div class="card glass-card">
             <div class="card-body">
               <div class="d-flex gap-2 mb-4 border-b pb-2 flex-wrap">
                 <button class="btn btn-outline active" id="tabIncomingReqs" onclick="switchRequestTab('incoming')">
@@ -880,13 +943,14 @@
 
         <!-- VIEW 8: ACCOUNT & SECURITY SETTINGS (FOR ALL ROLES) -->
         <section id="viewSettings" class="main-view" style="display: none;">
-          <div class="card glass-card modal-large" style="margin: 0 auto;">
-            <div class="card-header border-b">
-              <div>
-                <h2><i class="fa-solid fa-gear"></i> Account & Security Settings</h2>
-                <p class="text-muted">Manage your full name, email, login username, and password credentials.</p>
-              </div>
+          <div class="section-title-wrap mb-4">
+            <div>
+              <h2><i class="fa-solid fa-gear" style="color: var(--uet-green);"></i> Account & Security Settings</h2>
+              <span class="text-muted text-sm">Manage your full name, email, login username, and security password credentials.</span>
             </div>
+          </div>
+
+          <div class="card glass-card modal-large" style="margin: 0 auto;">
             <div class="card-body">
               <form id="settingsForm" onsubmit="handleUpdateSettings(event)">
                 <div class="form-grid">
@@ -973,8 +1037,10 @@
             <button class="chip" onclick="fillLogin('cs_admin', 'cs123')">💻 CS Coordinator (cs_admin / cs123)</button>
             <button class="chip" onclick="fillLogin('ee_admin', 'ee123')">⚡ EE Coordinator (ee_admin / ee123)</button>
             <button class="chip" onclick="fillLogin('me_admin', 'me123')">⚙️ ME Coordinator (me_admin / me123)</button>
-            <button class="chip" onclick="fillLogin('civ_admin', 'civ123')">🏗️ CIV Coordinator (civ_admin / civ123)</button>
-            <button class="chip" onclick="fillLogin('env_admin', 'env123')">🌿 ENV Coordinator (env_admin / env123)</button>
+            <button class="chip" onclick="fillLogin('civ_admin', 'civ123')">🏗️ CIV Coordinator (civ_admin /
+              civ123)</button>
+            <button class="chip" onclick="fillLogin('env_admin', 'env123')">🌿 ENV Coordinator (env_admin /
+              env123)</button>
           </div>
         </div>
       </div>
@@ -1075,6 +1141,12 @@
         <form id="roomFinderForm" onsubmit="checkRoomAvailability(event)" class="finder-form">
           <div class="form-grid">
             <div class="form-group">
+              <label>Department Filter</label>
+              <select id="rfDept">
+                <option value="">🏛️ All Departments (Campus-Wide)</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label>Select Day</label>
               <select id="rfDay" required>
                 <option value="Monday">Monday</option>
@@ -1089,7 +1161,6 @@
               <input type="time" id="rfStart" value="08:00" required>
             </div>
             <div class="form-group">
-
               <label>End Time</label>
               <input type="time" id="rfEnd" value="09:00" required>
             </div>
@@ -1391,8 +1462,8 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/auth.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/auth.js?v=20260818_v5"></script>
+  <script src="js/app.js?v=20260818_v5"></script>
 </body>
 
 </html>

@@ -74,26 +74,38 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// View Navigation Switcher (Requirement 1: Rename Dashboard to Campus Resource Utilization)
+// View Navigation Switcher
 async function switchMainView(viewId, navElem) {
-  document.querySelectorAll('.main-view').forEach(el => el.style.display = 'none');
+  // Super Admin Access Control Guard: Do NOT allow Super Admin to access viewDashboard
+  if (currentUser && currentUser.role === 'admin' && viewId === 'viewDashboard') {
+    viewId = 'viewDeptsTree';
+    navElem = document.getElementById('navDepts');
+  }
+
+  document.querySelectorAll('.main-view').forEach(el => {
+    el.style.display = 'none';
+    el.classList.remove('active');
+  });
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
   const target = document.getElementById(viewId);
-  if (target) target.style.display = 'block';
+  if (target) {
+    target.style.display = 'block';
+    target.classList.add('active');
+  }
 
   if (navElem) navElem.classList.add('active');
 
   const pageHeader = document.getElementById('pageHeaderTitle');
   if (pageHeader) {
-    if (viewId === 'viewDashboard') pageHeader.textContent = 'Campus Resource Utilization';
-    else if (viewId === 'viewDeptsTree') pageHeader.textContent = 'Departments & Room Allocation';
-    else if (viewId === 'viewTimetable') pageHeader.textContent = 'Centralized Timetable Matrix';
-    else if (viewId === 'viewExcelImport') pageHeader.textContent = 'Update Room View (Excel Parser)';
-    else if (viewId === 'viewRoomsManager') pageHeader.textContent = 'Rooms & Equipment Manager';
-    else if (viewId === 'viewRoomRequests') pageHeader.textContent = 'Cross-Department Room Requests';
-    else if (viewId === 'viewAdminCreds') pageHeader.textContent = 'Coordinator Passwords';
-    else if (viewId === 'viewSettings') pageHeader.textContent = 'System Settings & Profile';
+    if (viewId === 'viewDashboard') pageHeader.innerHTML = '<i class="fa-solid fa-chart-line" style="color:var(--uet-green); margin-right:8px;"></i> Campus Resource Utilization';
+    else if (viewId === 'viewDeptsTree') pageHeader.innerHTML = '<i class="fa-solid fa-building-columns" style="color:var(--uet-green); margin-right:8px;"></i> Department Hierarchy';
+    else if (viewId === 'viewTimetable') pageHeader.innerHTML = '<i class="fa-solid fa-calendar-days" style="color:var(--uet-green); margin-right:8px;"></i> Centralized Timetable';
+    else if (viewId === 'viewExcelImport') pageHeader.innerHTML = '<i class="fa-solid fa-file-excel" style="color:var(--uet-green); margin-right:8px;"></i> Room View Importer';
+    else if (viewId === 'viewRoomsManager') pageHeader.innerHTML = '<i class="fa-solid fa-door-open" style="color:var(--uet-green); margin-right:8px;"></i> Rooms & Labs Manager';
+    else if (viewId === 'viewRoomRequests') pageHeader.innerHTML = '<i class="fa-solid fa-paper-plane" style="color:var(--uet-green); margin-right:8px;"></i> Room Requests Portal';
+    else if (viewId === 'viewAdminCreds') pageHeader.innerHTML = '<i class="fa-solid fa-user-shield" style="color:var(--uet-green); margin-right:8px;"></i> Coordinator Management';
+    else if (viewId === 'viewSettings') pageHeader.innerHTML = '<i class="fa-solid fa-gear" style="color:var(--uet-green); margin-right:8px;"></i> Account Settings';
   }
 
   if (viewId === 'viewDashboard') renderCampusResourceUtilization();
@@ -109,11 +121,49 @@ async function switchMainView(viewId, navElem) {
   closeSidebarMobile();
 }
 
+// Campus Resource Utilization Sub-Tab Navigation Switcher
+function switchDashboardTab(tabId, elem) {
+  const pills = document.querySelectorAll('.subnav-pill');
+  pills.forEach(p => p.classList.remove('active'));
+
+  if (elem) {
+    elem.classList.add('active');
+  }
+
+  const panels = document.querySelectorAll('.dash-tab-panel');
+  if (tabId === 'all') {
+    panels.forEach(panel => {
+      panel.style.display = 'block';
+      panel.classList.add('active');
+    });
+  } else {
+    panels.forEach(panel => {
+      panel.style.display = 'none';
+      panel.classList.remove('active');
+    });
+    const panelName = 'panel' + tabId.charAt(0).toUpperCase() + tabId.slice(1);
+    const targetPanel = document.getElementById(panelName);
+    if (targetPanel) {
+      targetPanel.style.display = 'block';
+      targetPanel.classList.add('active');
+    }
+  }
+
+  // Re-trigger chart rendering/resize for animated charts across any sub-tab view
+  setTimeout(() => {
+    renderResourceCharts();
+  }, 50);
+}
+
 function toggleSidebar() {
   const sidebar = document.getElementById('uetSidebar');
   const overlay = document.getElementById('sidebarOverlay');
-  if (sidebar) sidebar.classList.toggle('mobile-open');
-  if (overlay) overlay.classList.toggle('active');
+  if (window.innerWidth <= 992) {
+    if (sidebar) sidebar.classList.toggle('mobile-open');
+    if (overlay) overlay.classList.toggle('active');
+  } else {
+    if (sidebar) sidebar.classList.toggle('collapsed');
+  }
 }
 
 function closeSidebarMobile() {
@@ -168,6 +218,18 @@ function populateFilterDropdowns() {
     filterRoom.innerHTML = `<option value="">All Rooms</option>` +
       masterRooms.map(r => `<option value="${r.id}">${r.room_name} (${r.room_type})</option>`).join('');
   }
+
+  const facultyDeptFilter = document.getElementById('facultyDeptFilter');
+  if (facultyDeptFilter) {
+    facultyDeptFilter.innerHTML = `<option value="">All Departments</option>` +
+      masterDepartments.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('');
+  }
+
+  const deptDatalist = document.getElementById('departmentsDatalist');
+  if (deptDatalist) {
+    deptDatalist.innerHTML = `<option value="All Departments"></option>` + 
+      masterDepartments.map(d => `<option value="${d.name} (${d.code})"></option>`).join('');
+  }
 }
 
 // DEPARTMENT & ROOM TREE VIEW
@@ -192,14 +254,14 @@ function renderDeptTree() {
       dashHtml += `
         <div class="dept-tree-node">
           <div class="dept-tree-header" onclick="toggleTreeNode('dash-node-${d.id}', this)">
-            <div class="tree-toggle-btn" id="dash-btn-toggle-${d.id}">${isFirstOpen ? '-' : '+'}</div>
+            <div class="tree-toggle-btn" id="dash-btn-toggle-${d.id}">-</div>
             <div class="dept-title"><i class="fa-solid fa-building-columns" style="color:${d.color || '#006633'}"></i> ${d.name} (${d.code})</div>
             <span class="badge bg-blue" style="color:#fff; margin-left:4px;">Classrooms: ${cCount}</span>
             <span class="badge bg-purple" style="color:#fff; margin-left:4px;">Labs: ${lCount}</span>
             <span class="badge bg-green" style="color:#fff; margin-left:4px;">📹 Projectors: ${pCount}</span>
           </div>
 
-          <div class="dept-tree-children" id="dash-node-${d.id}" style="display: ${isFirstOpen ? 'flex' : 'none'};">
+          <div class="dept-tree-children" id="dash-node-${d.id}" style="display: flex;">
       `;
 
       if (roomList.length === 0) {
@@ -251,7 +313,7 @@ function renderDeptTree() {
       mainHtml += `
         <div class="dept-tree-node">
           <div class="dept-tree-header">
-            <div class="tree-toggle-btn" id="main-btn-toggle-${d.id}" onclick="toggleTreeNode('main-node-${d.id}', this.parentElement)">${isFirstOpen ? '-' : '+'}</div>
+            <div class="tree-toggle-btn" id="main-btn-toggle-${d.id}" onclick="toggleTreeNode('main-node-${d.id}', this.parentElement)">-</div>
             <div class="dept-title" onclick="toggleTreeNode('main-node-${d.id}', this.parentElement)"><i class="fa-solid fa-building-columns" style="color:${d.color || '#006633'}"></i> ${d.name} (${d.code})</div>
             <span class="badge bg-blue" style="color:#fff; margin-left:4px;">Classrooms: ${cCount}</span>
             <span class="badge bg-purple" style="color:#fff; margin-left:4px;">Labs: ${lCount}</span>
@@ -264,7 +326,7 @@ function renderDeptTree() {
             ` : ''}
           </div>
 
-          <div class="dept-tree-children" id="main-node-${d.id}" style="display: ${isFirstOpen ? 'flex' : 'none'};">
+          <div class="dept-tree-children" id="main-node-${d.id}" style="display: flex;">
       `;
 
       if (roomList.length === 0) {
@@ -467,10 +529,136 @@ async function renderTimetable() {
       return;
     }
 
-    renderWeeklyMatrix(currentTimetableEntries, dayFilter);
+    if (activeTimetableMode === 'blocks') {
+      renderBlockHeatmapGrid(currentTimetableEntries, dayFilter);
+    } else {
+      renderWeeklyMatrix(currentTimetableEntries, dayFilter);
+    }
   } catch (err) {
     gridWrapper.innerHTML = `<div class="form-error">Failed to load timetable data.</div>`;
   }
+}
+
+// Timetable View Mode Switcher Global Handler
+let activeTimetableMode = 'standard';
+
+function toggleTimetableMode() {
+  activeTimetableMode = (activeTimetableMode === 'standard') ? 'blocks' : 'standard';
+  updateTimetableModeButtonUI();
+  renderTimetable();
+}
+
+function switchTimetableMode(mode) {
+  activeTimetableMode = mode;
+  updateTimetableModeButtonUI();
+  renderTimetable();
+}
+
+function updateTimetableModeButtonUI() {
+  const toggleBtn = document.getElementById('btnToggleTimetableMode');
+  const legendBar = document.getElementById('blockModeLegend');
+
+  if (toggleBtn) {
+    if (activeTimetableMode === 'standard') {
+      toggleBtn.innerHTML = `<i class="fa-solid fa-grip-vertical"></i> Switch to Block Heatmap View`;
+      toggleBtn.className = 'btn btn-sm btn-outline';
+    } else {
+      toggleBtn.innerHTML = `<i class="fa-solid fa-table-cells"></i> Switch to Standard Table View`;
+      toggleBtn.className = 'btn btn-sm btn-primary';
+    }
+  }
+
+  if (legendBar) {
+    legendBar.style.setProperty('display', activeTimetableMode === 'blocks' ? 'flex' : 'none', 'important');
+  }
+}
+
+// Render Block Heatmap Grid View Mode (Exact Time Ranges & Enlarged Blocks)
+function renderBlockHeatmapGrid(entries, selectedDay) {
+  const gridWrapper = document.getElementById('gridWrapper');
+  if (!gridWrapper) return;
+
+  const daysToRender = selectedDay ? [selectedDay] : DAYS_OF_WEEK;
+
+  let html = `
+    <div class="micro-heatmap-wrapper p-3" style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow-x: auto;">
+      <div style="display: grid; grid-template-columns: 85px repeat(${TIME_SLOTS.length}, minmax(90px, 1fr)); gap: 10px; align-items: center; justify-content: center; width: 100%; max-width: 950px; margin: 0 auto;">
+        
+        <!-- Header Row: Day / Time Slots -->
+        <div style="font-weight: 700; font-size: 0.8rem; color: #1e293b; text-transform: uppercase; padding-right: 8px; white-space: nowrap;">Day / Slot</div>
+  `;
+
+  TIME_SLOTS.forEach((slot) => {
+    let timeLabel = `${slot.start}-${slot.end}`;
+    if (slot.start === '12:00') timeLabel = '12:00-01:00';
+    else if (slot.start === '13:00') timeLabel = '01:00-02:00';
+    else if (slot.start === '14:00') timeLabel = '02:00-03:00';
+    else if (slot.start === '15:00') timeLabel = '03:00-04:00';
+
+    html += `<div style="font-weight: 700; font-size: 0.72rem; color: #475569; text-align: center; white-space: nowrap;" title="${slot.label}">${timeLabel}</div>`;
+  });
+
+  daysToRender.forEach((day, dayIdx) => {
+    const isTopRow = dayIdx === 0 || day === 'Monday';
+    const isBottomRow = dayIdx === daysToRender.length - 1 || day === 'Friday';
+    const tooltipClass = (isTopRow || isBottomRow) ? 'heatmap-tooltip tooltip-below' : 'heatmap-tooltip';
+
+    html += `<div style="font-weight: 700; font-size: 0.82rem; color: #1e293b; white-space: nowrap; padding-right: 8px;">${day.substring(0, 3)}</div>`;
+
+    TIME_SLOTS.forEach(slot => {
+      const isLunchBreak = (slot.start === '12:00' && slot.end === '13:00');
+      const isJummahBreak = (slot.start === '13:00' && slot.end === '14:00' && day === 'Friday');
+
+      const matching = entries.filter(e => {
+        return e.day_of_week === day && (
+          (e.start_time >= slot.start && e.start_time < slot.end) ||
+          (e.start_time <= slot.start && e.end_time > slot.start)
+        );
+      });
+
+      if (isLunchBreak) {
+        html += `
+          <div class="micro-block block-lunch" style="width:100%; height:38px; border-radius:8px; background:#d97706; cursor:pointer; position:relative;">
+            <div class="${tooltipClass}">
+              🍔 Lunch Break
+            </div>
+          </div>
+        `;
+      } else if (isJummahBreak) {
+        html += `
+          <div class="micro-block block-jummah" style="width:100%; height:38px; border-radius:8px; background:#10b981; cursor:pointer; position:relative;">
+            <div class="${tooltipClass}">
+              🕌 Jummah Break
+            </div>
+          </div>
+        `;
+      } else if (matching.length > 0) {
+        const roomNumbers = [...new Set(matching.map(m => m.room_name))].join(', ');
+        html += `
+          <div class="micro-block block-occupied" style="width:100%; height:38px; border-radius:8px; background:#16a34a; cursor:pointer; position:relative;">
+            <div class="${tooltipClass}">
+              🚪 Rooms: <strong>${roomNumbers}</strong>
+            </div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="micro-block block-empty" style="width:100%; height:38px; border-radius:8px; background:#ef4444; cursor:pointer; position:relative;">
+            <div class="${tooltipClass}">
+              🔴 Vacant Slot
+            </div>
+          </div>
+        `;
+      }
+    });
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  gridWrapper.innerHTML = html;
 }
 
 // Weekly Matrix Renderer
@@ -1213,54 +1401,95 @@ async function handleDeleteSlot(id) {
   }
 }
 
-// Room Availability Lookup Modal
+// Room Availability Lookup Modal (Requirement 3: Department-Specific with Total, Occupied, and Available Summary)
 function openRoomFinderModal() {
+  const rfDept = document.getElementById('rfDept');
+  if (rfDept) {
+    rfDept.innerHTML = `<option value="">🏛️ All Departments (Campus-Wide)</option>` + 
+      masterDepartments.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('');
+  }
   openModal('roomFinderModal');
 }
+
 function closeRoomFinderModal() {
   closeModal('roomFinderModal');
 }
 
 async function checkRoomAvailability(e) {
   e.preventDefault();
+  const deptSelect = document.getElementById('rfDept');
+  const deptId = deptSelect ? deptSelect.value : '';
   const day = document.getElementById('rfDay').value;
   const start_time = document.getElementById('rfStart').value;
   const end_time = document.getElementById('rfEnd').value;
 
   const container = document.getElementById('roomFinderResults');
-  container.innerHTML = `<p class="placeholder-text"><i class="fa-solid fa-spin fa-circle-notch"></i> Searching free classrooms...</p>`;
+  container.innerHTML = `<p class="placeholder-text"><i class="fa-solid fa-spin fa-circle-notch"></i> Searching free classrooms & laboratories...</p>`;
 
   try {
     const res = await fetch(`/api/rooms/availability?day=${day}&start_time=${start_time}&end_time=${end_time}`);
     const data = await res.json();
 
-    if (data.available.length === 0) {
-      container.innerHTML = `<div class="form-error">No rooms available at this time slot (${day} ${start_time} - ${end_time}). All rooms occupied!</div>`;
-      return;
+    let targetRooms = masterRooms;
+    if (deptId) {
+      targetRooms = masterRooms.filter(r => Number(r.department_id) === Number(deptId));
     }
 
-    let html = `
-      <div style="margin-bottom: 12px; font-weight: 600; color: var(--uet-green);">
-        <i class="fa-solid fa-circle-check"></i> Found ${data.available.length} Free Rooms for ${day} (${start_time} - ${end_time}):
-      </div>
-      <div class="form-grid">
-    `;
+    const availableIds = new Set((data.available || []).map(r => Number(r.id)));
+    const availableRooms = targetRooms.filter(r => availableIds.has(Number(r.id)));
+    const occupiedRooms = targetRooms.filter(r => !availableIds.has(Number(r.id)));
 
-    data.available.forEach(r => {
-      const isLab = r.room_type === 'Computer Lab';
-      html += `
-        <div class="slot-card" style="border-left-color: var(--uet-green);">
-          <div class="course-code">${r.room_name}</div>
-          <div class="course-title">${isLab ? 'Computer Lab' : 'Lecture Hall'}</div>
-          <div class="slot-meta">
-            <span>🪑 Seats: <strong>${r.capacity}</strong> | ${r.projector ? '📹 Proj: Yes' : 'No Proj'}</span>
-            ${isLab ? `<span>💻 Computers: <strong>${r.computers_count || 40}</strong></span>` : ''}
+    const totalCount = targetRooms.length;
+    const availableCount = availableRooms.length;
+    const occupiedCount = occupiedRooms.length;
+
+    let html = `
+      <div class="stat-cards-grid stat-cards-3 mb-3">
+        <div class="stat-card p-3" style="border-left: 4px solid #0284c7; background:#ffffff;">
+          <div class="stat-info">
+            <span class="stat-value" style="color: #0284c7; font-size: 1.4rem; font-weight: 800;">${totalCount}</span>
+            <span class="stat-label" style="text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #64748b;">Total Rooms</span>
           </div>
         </div>
-      `;
-    });
+        <div class="stat-card p-3" style="border-left: 4px solid #16a34a; background:#ffffff;">
+          <div class="stat-info">
+            <span class="stat-value" style="color: #16a34a; font-size: 1.4rem; font-weight: 800;">${availableCount}</span>
+            <span class="stat-label" style="text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #64748b;">Empty / Available Rooms</span>
+          </div>
+        </div>
+        <div class="stat-card p-3" style="border-left: 4px solid #dc2626; background:#ffffff;">
+          <div class="stat-info">
+            <span class="stat-value" style="color: #dc2626; font-size: 1.4rem; font-weight: 800;">${occupiedCount}</span>
+            <span class="stat-label" style="text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #64748b;">Occupied Rooms</span>
+          </div>
+        </div>
+      </div>
 
-    html += `</div>`;
+      <div style="margin-bottom: 12px; font-weight: 700; color: var(--uet-green);">
+        <i class="fa-solid fa-circle-check"></i> Found ${availableCount} Free Rooms on ${day} (${start_time} - ${end_time}):
+      </div>
+    `;
+
+    if (availableCount === 0) {
+      html += `<div class="form-error">No vacant rooms available at this time slot for the selected filter (${day} ${start_time} - ${end_time}). All ${totalCount} rooms are occupied!</div>`;
+    } else {
+      html += `<div class="form-grid">`;
+      availableRooms.forEach(r => {
+        const isLab = r.room_type === 'Computer Lab' || r.room_type === 'Science Lab';
+        html += `
+          <div class="slot-card p-3" style="border-left: 4px solid var(--uet-green); background: #ffffff; box-shadow: var(--shadow-sm); border-radius: 8px;">
+            <div class="course-code" style="font-weight: 700; color: var(--uet-green-dark);">${r.room_name} (${r.department_code || 'DEPT'})</div>
+            <div class="course-title" style="font-size: 0.85rem; color: #475569;">${r.room_type}</div>
+            <div class="slot-meta" style="margin-top: 4px; font-size: 0.8rem;">
+              <span>🪑 Seats: <strong>${r.capacity}</strong> | ${r.projector ? '📹 Proj: Yes' : 'No Proj'}</span>
+              ${isLab ? `<span> | 💻 Equip: <strong>${r.computers_count || 40}</strong></span>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+    }
+
     container.innerHTML = html;
   } catch (err) {
     container.innerHTML = `<div class="form-error">Failed to check room availability.</div>`;
@@ -1451,34 +1680,59 @@ function openRoomRequestModal(preselectRoomId = null) {
 
   const myDeptId = Number(currentUser.department_id);
   const roomSelect = document.getElementById('reqRoom');
+  if (!roomSelect) return;
   roomSelect.innerHTML = '';
 
-  const otherRooms = masterRooms.filter(r => Number(r.department_id) !== myDeptId);
+  let availableTargetRooms = [];
+  if (currentUser.role === 'admin' || !myDeptId) {
+    availableTargetRooms = masterRooms;
+  } else {
+    availableTargetRooms = masterRooms.filter(r => Number(r.department_id) !== myDeptId);
+    if (availableTargetRooms.length === 0) {
+      availableTargetRooms = masterRooms;
+    }
+  }
 
-  if (otherRooms.length === 0) {
-    alert('No rooms belonging to other departments are available to request.');
+  if (availableTargetRooms.length === 0) {
+    alert('No rooms are currently registered in the system to request.');
     return;
   }
 
-  otherRooms.forEach(r => {
+  availableTargetRooms.forEach(r => {
     const opt = document.createElement('option');
     opt.value = r.id;
-    opt.textContent = `${r.room_name} - ${r.department_name} (${r.room_type}, ${r.capacity} seats)`;
+    opt.textContent = `${r.room_name} — ${r.department_name || r.department_code || 'Dept'} (${r.room_type}, ${r.capacity} seats)`;
     if (preselectRoomId && Number(r.id) === Number(preselectRoomId)) {
       opt.selected = true;
     }
     roomSelect.appendChild(opt);
   });
 
-  document.getElementById('reqCourseCode').value = `${currentUser.department_code || 'CS'}-101`;
-  document.getElementById('reqCourseName').value = 'Guest Department Lecture';
-  document.getElementById('reqSection').value = `${currentUser.department_code || 'CS'}-1A`;
-  document.getElementById('reqSemester').value = '1';
-  document.getElementById('reqNotes').value = '';
-  document.getElementById('reqError').style.display = 'none';
+  const btnSubmit = document.getElementById('btnSubmitReq');
+  if (btnSubmit) {
+    btnSubmit.disabled = false;
+    btnSubmit.style.opacity = '1';
+  }
+
+  const reqCode = document.getElementById('reqCourseCode');
+  if (reqCode) reqCode.value = `${currentUser.department_code || 'CS'}-101`;
+
+  const reqName = document.getElementById('reqCourseName');
+  if (reqName) reqName.value = 'Guest Department Lecture';
+
+  const reqSec = document.getElementById('reqSection');
+  if (reqSec) reqSec.value = `${currentUser.department_code || 'CS'}-1A`;
+
+  const reqSem = document.getElementById('reqSemester');
+  if (reqSem) reqSem.value = '1';
+
+  const reqNotes = document.getElementById('reqNotes');
+  if (reqNotes) reqNotes.value = '';
+
+  const reqError = document.getElementById('reqError');
+  if (reqError) reqError.style.display = 'none';
 
   checkRequestRoomVacancy();
-
   openModal('roomRequestModal');
 }
 
@@ -1499,7 +1753,8 @@ function checkRequestRoomVacancy() {
   const targetRoom = masterRooms.find(r => r.id === roomId);
   const roomName = targetRoom ? targetRoom.room_name : 'Room';
 
-  const conflict = timetableEntries.find(e => 
+  const entriesList = (typeof currentTimetableEntries !== 'undefined' && Array.isArray(currentTimetableEntries)) ? currentTimetableEntries : [];
+  const conflict = entriesList.find(e => 
     Number(e.room_id) === roomId &&
     e.day_of_week === day &&
     (e.start_time < end && e.end_time > start)
@@ -1742,6 +1997,71 @@ function renderCampusResourceUtilization() {
   renderFacultyWorkloadTable();
 }
 
+// Chart.js Plugin to Render Exact Numerical Values on Top of Bars, Line Points, and Doughnut Slices
+const chartValueLabelsPlugin = {
+  id: 'customValueLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    const isHorizontal = chart.options && chart.options.indexAxis === 'y';
+
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if (!meta || meta.hidden) return;
+      meta.data.forEach((element, index) => {
+        const val = dataset.data[index];
+        if (val === undefined || val === null) return;
+        const displayVal = typeof val === 'number' ? val : val;
+        if (displayVal === 0 && chart.config.type === 'doughnut') return;
+
+        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+
+        if (chart.config.type === 'bar') {
+          if (isHorizontal) {
+            const chartRight = chart.chartArea ? chart.chartArea.right : (chart.width - 25);
+            if (element.x + 25 > chartRight) {
+              ctx.fillStyle = '#ffffff';
+              ctx.textAlign = 'right';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(displayVal, element.x - 8, element.y);
+            } else {
+              ctx.fillStyle = '#0f172a';
+              ctx.textAlign = 'left';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(displayVal, element.x + 6, element.y);
+            }
+          } else {
+            ctx.fillStyle = '#0f172a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(displayVal, element.x, element.y - 3);
+          }
+        } else if (chart.config.type === 'line') {
+          ctx.fillStyle = '#0f172a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(displayVal + '%', element.x, element.y - 8);
+        } else if (chart.config.type === 'doughnut' || chart.config.type === 'pie') {
+          const position = element.tooltipPosition();
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(displayVal, position.x, position.y);
+        }
+      });
+    });
+    ctx.restore();
+  }
+};
+
+if (typeof Chart !== 'undefined' && Chart.register) {
+  try {
+    Chart.register(chartValueLabelsPlugin);
+  } catch (e) {
+    // Plugin registered
+  }
+}
+
 function renderResourceCharts() {
   if (typeof Chart === 'undefined') return;
 
@@ -1766,6 +2086,14 @@ function renderResourceCharts() {
     document.getElementById('badgeAvgOccupancy').textContent = `${avgOccupancy}% Avg Occupancy`;
   }
 
+  // Common Animation Settings
+  const chartAnimationOptions = {
+    duration: 1500,
+    easing: 'easeOutQuart',
+    animateRotate: true,
+    animateScale: true
+  };
+
   // Chart 1: Department Resources Bar Chart
   const ctxResources = document.getElementById('chartDeptResources');
   if (ctxResources) {
@@ -1775,15 +2103,16 @@ function renderResourceCharts() {
       data: {
         labels: deptCodes,
         datasets: [
-          { label: 'Total Rooms', data: roomCounts, backgroundColor: '#006633' },
-          { label: 'Laboratories', data: labCounts, backgroundColor: '#ea580c' },
-          { label: 'Projectors', data: projCounts, backgroundColor: '#16a34a' },
-          { label: 'Computers (x10)', data: compCounts.map(c => Math.round(c / 10)), backgroundColor: '#7c3aed' }
+          { label: 'Total Rooms', data: roomCounts, backgroundColor: '#006633', borderRadius: 6 },
+          { label: 'Laboratories', data: labCounts, backgroundColor: '#ea580c', borderRadius: 6 },
+          { label: 'Projectors', data: projCounts, backgroundColor: '#16a34a', borderRadius: 6 },
+          { label: 'Computers (x10)', data: compCounts.map(c => Math.round(c / 10)), backgroundColor: '#7c3aed', borderRadius: 6 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: chartAnimationOptions,
         plugins: { legend: { position: 'bottom' } },
         scales: { y: { beginAtZero: true } }
       }
@@ -1808,16 +2137,17 @@ function renderResourceCharts() {
           borderColor: '#2563eb',
           backgroundColor: 'rgba(37, 99, 235, 0.15)',
           fill: true,
-          tension: 0.3,
+          tension: 0.35,
           pointBackgroundColor: pointColors,
           pointBorderColor: pointColors,
           pointRadius: 6,
-          pointHoverRadius: 8
+          pointHoverRadius: 9
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: chartAnimationOptions,
         plugins: { legend: { position: 'bottom' } },
         scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
       }
@@ -1849,6 +2179,7 @@ function renderResourceCharts() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: chartAnimationOptions,
         plugins: { legend: { position: 'bottom' } }
       }
     });
@@ -1877,12 +2208,14 @@ function renderResourceCharts() {
         datasets: [{
           label: 'Cross-Department Support Slots Provided',
           data: crossDeptSupportPerDept,
-          backgroundColor: '#0891b2'
+          backgroundColor: '#0891b2',
+          borderRadius: 6
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: chartAnimationOptions,
         plugins: { legend: { position: 'bottom' } },
         scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
       }
@@ -1890,6 +2223,11 @@ function renderResourceCharts() {
   }
 
   // Chart 5: Faculty Designation Ranks Chart
+  const isDeptCoord = currentUser && currentUser.role === 'dept_admin' && currentUser.department_id;
+  const targetFacultyList = isDeptCoord 
+    ? masterInstructors.filter(i => Number(i.department_id) === Number(currentUser.department_id))
+    : masterInstructors;
+
   const desigRanks = [
     'Professor',
     'Associate Professor',
@@ -1899,7 +2237,13 @@ function renderResourceCharts() {
     'Graduate Assistant',
     'Teaching Assistant'
   ];
-  const rankCounts = desigRanks.map(rank => masterInstructors.filter(i => (i.designation || '').toLowerCase() === rank.toLowerCase()).length);
+  const rankCounts = desigRanks.map(rank => targetFacultyList.filter(i => (i.designation || '').toLowerCase() === rank.toLowerCase()).length);
+
+  if (document.getElementById('badgeTotalFacultyRanks')) {
+    document.getElementById('badgeTotalFacultyRanks').textContent = isDeptCoord 
+      ? `${targetFacultyList.length} Members (${currentUser.department_code || 'Dept'})`
+      : `${masterInstructors.length} Members (All Departments)`;
+  }
 
   const ctxFaculty = document.getElementById('chartFacultyRanks');
   if (ctxFaculty) {
@@ -1911,20 +2255,22 @@ function renderResourceCharts() {
         datasets: [{
           label: 'Faculty Members',
           data: rankCounts,
-          backgroundColor: ['#006633', '#16a34a', '#2563eb', '#7c3aed', '#ea580c', '#0891b2', '#dc2626']
+          backgroundColor: ['#006633', '#16a34a', '#2563eb', '#7c3aed', '#ea580c', '#0891b2', '#dc2626'],
+          borderRadius: 6
         }]
       },
       options: {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
+        animation: chartAnimationOptions,
         plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true } }
+        scales: { x: { beginAtZero: true, grace: '15%' } }
       }
     });
   }
 
-  // Chart 6: Room Categories Breakdown Doughnut Chart (Support Science Lab!)
+  // Chart 6: Room Categories Breakdown Doughnut Chart
   const classroomsCount = masterRooms.filter(r => r.room_type === 'Lecture Hall' || r.room_type === 'Lecture Room').length;
   const compLabCount = masterRooms.filter(r => r.room_type === 'Computer Lab').length;
   const sciLabCount = masterRooms.filter(r => r.room_type === 'Science Lab').length;
@@ -1945,6 +2291,7 @@ function renderResourceCharts() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: chartAnimationOptions,
         plugins: { legend: { position: 'bottom' } }
       }
     });
@@ -1977,34 +2324,43 @@ function renderDeptRoomsUtilizationTable() {
 
     html += `
       <tr>
-        <td>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <i class="fa-solid fa-building-columns" style="color:${d.color || '#006633'}; font-size:1.1rem;"></i>
+        <td style="vertical-align: middle;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:rgba(0,102,51,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <i class="fa-solid fa-building-columns" style="color:${d.color || '#006633'}; font-size:1.1rem;"></i>
+            </div>
             <div>
-              <strong>${d.name}</strong>
-              <div class="text-xs text-muted">Code: ${d.code} | ${d.building || 'KSK Block'}</div>
+              <strong style="font-size:0.95rem; color:var(--text-dark);">${d.name}</strong>
+              <div class="text-xs text-muted" style="margin-top:2px;">Code: <strong>${d.code}</strong> | ${d.building || 'KSK Block'}</div>
             </div>
           </div>
         </td>
-        <td><strong>${dRooms.length}</strong> Rooms</td>
-        <td>${classrooms} Classrooms</td>
-        <td>
-          <span class="text-xs">💻 ${compLabs} Comp | 🧪 ${sciLabs} Sci</span>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="badge bg-blue" style="color:#fff; font-weight:700; padding:6px 12px; font-size:0.85rem;"><i class="fa-solid fa-door-closed"></i> ${dRooms.length} Rooms</span></td>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="badge bg-blue" style="background:#0284c7 !important; color:#ffffff !important; font-weight:600; padding:6px 12px; font-size:0.85rem;"><i class="fa-solid fa-chalkboard-user"></i> ${classrooms} Classrooms</span></td>
+        <td style="vertical-align: middle;">
+          <div style="display:flex; flex-direction:column; gap:3px; white-space:nowrap;">
+            <span class="badge bg-purple" style="font-size:0.75rem; padding:3px 8px; color:#fff; font-weight:600;"><i class="fa-solid fa-laptop-code"></i> ${compLabs} Comp Labs</span>
+            <span class="badge bg-orange" style="font-size:0.75rem; padding:3px 8px; color:#fff; font-weight:600;"><i class="fa-solid fa-flask"></i> ${sciLabs} Sci Labs</span>
+          </div>
         </td>
-        <td>💻 ${computers} PCs</td>
-        <td>📹 ${projectors}</td>
-        <td><span class="badge bg-purple" style="color:#fff;">${activeSlots} Slots</span></td>
-        <td>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="badge bg-purple" style="color:#fff; font-weight:600; padding:5px 10px; font-size:0.82rem;"><i class="fa-solid fa-desktop"></i> ${computers} PCs</span></td>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="badge bg-green" style="color:#fff; font-weight:600; padding:5px 10px; font-size:0.82rem;"><i class="fa-solid fa-video"></i> ${projectors}</span></td>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="badge bg-purple" style="color:#fff; font-weight:700; padding:6px 12px; font-size:0.85rem;"><i class="fa-solid fa-clock"></i> ${activeSlots} Slots</span></td>
+        <td style="vertical-align: middle; min-width: 130px;">
           <div style="display:flex; align-items:center; gap:8px;">
-            <div class="progress-bar-bg" style="flex:1; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
-              <div style="width:${utilPct}%; height:100%; background:${statusObj.color};"></div>
+            <div class="progress-bar-bg" style="flex:1; height:8px; background:#e2e8f0; border-radius:6px; overflow:hidden;">
+              <div style="width:${utilPct}%; height:100%; background:${statusObj.color}; border-radius:6px;"></div>
             </div>
-            <strong class="text-sm">${utilPct}%</strong>
+            <strong class="text-sm" style="color:${statusObj.color}; font-weight:700;">${utilPct}%</strong>
           </div>
         </td>
-        <td><span class="badge ${statusObj.badgeClass}" style="color:${statusObj.badgeColor};">${statusObj.label}</span></td>
-        <td>
-          <button class="btn btn-sm btn-outline" onclick="openDeptResourceModal(${d.id})">
+        <td style="vertical-align: middle; white-space: nowrap;">
+          <span class="badge ${statusObj.badgeClass}" style="color:${statusObj.badgeColor}; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; padding:6px 12px; font-weight:600; font-size:0.8rem; border-radius:20px;">
+            <i class="fa-solid fa-shield-halved"></i> ${statusObj.label}
+          </span>
+        </td>
+        <td style="vertical-align: middle;">
+          <button class="btn btn-sm btn-outline" style="white-space:nowrap;" onclick="openDeptResourceModal(${d.id})">
             <i class="fa-solid fa-sliders"></i> Manage Resources
           </button>
         </td>
@@ -2027,67 +2383,80 @@ function renderDepartmentStatsCards() {
   let html = '';
   masterDepartments.forEach(d => {
     const dRooms = masterRooms.filter(r => Number(r.department_id) === Number(d.id));
-    const classrooms = dRooms.filter(r => r.room_type !== 'Computer Lab' && r.room_type !== 'Science Lab').length;
-    const labs = dRooms.filter(r => r.room_type === 'Computer Lab' || r.room_type === 'Science Lab').length;
-    const computers = dRooms.reduce((acc, r) => acc + (Number(r.computers_count) || (r.room_type === 'Computer Lab' ? 40 : 0)), 0);
-    const projectors = dRooms.filter(r => r.projector === 1 || r.projector === 'Yes' || r.projector === '1').length;
     const dInstructors = masterInstructors.filter(i => Number(i.department_id) === Number(d.id));
+
+    const classrooms = dRooms.filter(r => r.room_type === 'Lecture Hall' || r.room_type === 'Lecture Room').length;
+    const compLabs = dRooms.filter(r => r.room_type === 'Computer Lab').length;
+    const sciLabs = dRooms.filter(r => r.room_type === 'Science Lab').length;
+    const computers = dRooms.reduce((acc, r) => acc + (Number(r.computers_count) || (r.room_type === 'Computer Lab' ? 40 : (r.room_type === 'Science Lab' ? 10 : 0))), 0);
+    const projectors = dRooms.filter(r => r.projector === 1 || r.projector === 'Yes' || r.projector === '1').length;
     const activeSlots = currentTimetableEntries.filter(e => Number(e.department_id) === Number(d.id)).length;
 
-    const maxWeeklySlots = Math.max(1, dRooms.length * 40);
-    const utilPct = Math.min(100, Math.round((activeSlots / maxWeeklySlots) * 100 * 10) / 10);
-
     html += `
-      <div class="dept-stat-card glass-card" style="border-top: 4px solid ${d.color || '#006633'};">
-        <div class="dept-stat-header">
-          <div class="dept-stat-brand">
-            <i class="fa-solid fa-building-columns" style="color: ${d.color || '#006633'}; font-size: 1.5rem;"></i>
+      <div class="dept-stat-card glass-card">
+        <div class="dept-card-header" style="border-bottom: 2px solid ${d.color || '#006633'};">
+          <div class="dept-card-brand">
+            <i class="fa-solid fa-building-columns" style="color:${d.color || '#006633'};"></i>
             <div>
               <h3>${d.name}</h3>
-              <span class="badge" style="background:${d.color || '#006633'}; color:#fff;">${d.code}</span>
-              <span class="text-xs text-muted ml-1">${d.building || 'Academic Block'}</span>
+              <span>Dept Code: ${d.code} | ${d.building || 'KSK Campus'}</span>
             </div>
           </div>
-          <button class="btn btn-sm btn-accent" onclick="openDeptResourceModal(${d.id})">
-            <i class="fa-solid fa-gear"></i> Manage Form
-          </button>
+          ${canUserEditDept(d.id) ? `
+            <button class="btn btn-sm btn-outline" onclick="openDeptResourceModal(${d.id})">
+              <i class="fa-solid fa-pen-to-square"></i> Edit
+            </button>
+          ` : ''}
         </div>
 
-        <div class="dept-stat-body mt-3">
-          <div class="resource-metrics-grid">
-            <div class="metric-box">
-              <span class="metric-val">${dRooms.length}</span>
-              <span class="metric-lbl">Total Rooms</span>
+        <div class="dept-card-body">
+          <div class="dept-metrics-grid">
+            <div class="dept-metric-item">
+              <i class="fa-solid fa-door-closed icon-blue"></i>
+              <div class="metric-data">
+                <span class="m-val">${dRooms.length}</span>
+                <span class="m-lbl">Total Rooms</span>
+              </div>
             </div>
-            <div class="metric-box">
-              <span class="metric-val">${classrooms}</span>
-              <span class="metric-lbl">Classrooms</span>
-            </div>
-            <div class="metric-box">
-              <span class="metric-val">${labs}</span>
-              <span class="metric-lbl">Laboratories</span>
-            </div>
-            <div class="metric-box">
-              <span class="metric-val">${computers}</span>
-              <span class="metric-lbl">Computers</span>
-            </div>
-            <div class="metric-box">
-              <span class="metric-val">${projectors}</span>
-              <span class="metric-lbl">Projectors</span>
-            </div>
-            <div class="metric-box">
-              <span class="metric-val">${dInstructors.length}</span>
-              <span class="metric-lbl">Faculty</span>
-            </div>
-          </div>
 
-          <div class="util-progress-wrap mt-3">
-            <div class="flex-between text-xs mb-1">
-              <span>Overall Resource Utilization Rate</span>
-              <strong>${utilPct}%</strong>
+            <div class="dept-metric-item">
+              <i class="fa-solid fa-chalkboard-user icon-green"></i>
+              <div class="metric-data">
+                <span class="m-val">${classrooms}</span>
+                <span class="m-lbl">Classrooms</span>
+              </div>
             </div>
-            <div class="progress-bar-bg" style="height: 10px; background: #e2e8f0; border-radius: 6px; overflow: hidden;">
-              <div style="width: ${utilPct}%; height: 100%; background: linear-gradient(90deg, ${d.color || '#006633'}, #2563eb); border-radius: 6px;"></div>
+
+            <div class="dept-metric-item">
+              <i class="fa-solid fa-laptop-code icon-purple"></i>
+              <div class="metric-data">
+                <span class="m-val">${compLabs + sciLabs}</span>
+                <span class="m-lbl">Labs (${compLabs} C | ${sciLabs} S)</span>
+              </div>
+            </div>
+
+            <div class="dept-metric-item">
+              <i class="fa-solid fa-desktop icon-orange"></i>
+              <div class="metric-data">
+                <span class="m-val">${computers}</span>
+                <span class="m-lbl">Computers</span>
+              </div>
+            </div>
+
+            <div class="dept-metric-item">
+              <i class="fa-solid fa-video icon-green"></i>
+              <div class="metric-data">
+                <span class="m-val">${projectors}</span>
+                <span class="m-lbl">Projectors</span>
+              </div>
+            </div>
+
+            <div class="dept-metric-item">
+              <i class="fa-solid fa-user-graduate icon-teal"></i>
+              <div class="metric-data">
+                <span class="m-val">${dInstructors.length}</span>
+                <span class="m-lbl">Faculty</span>
+              </div>
             </div>
           </div>
         </div>
@@ -2099,30 +2468,64 @@ function renderDepartmentStatsCards() {
 }
 
 function renderFacultyStats() {
-  const getCount = rank => masterInstructors.filter(i => (i.designation || '').toLowerCase() === rank.toLowerCase()).length;
+  const isDeptCoord = currentUser && currentUser.role === 'dept_admin' && currentUser.department_id;
+  const targetInstructors = isDeptCoord 
+    ? masterInstructors.filter(i => Number(i.department_id) === Number(currentUser.department_id))
+    : masterInstructors;
 
-  if (document.getElementById('statProfessorsCount')) document.getElementById('statProfessorsCount').textContent = getCount('Professor');
-  if (document.getElementById('statAssocProfCount')) document.getElementById('statAssocProfCount').textContent = getCount('Associate Professor');
-  if (document.getElementById('statAsstProfCount')) document.getElementById('statAsstProfCount').textContent = getCount('Assistant Professor');
-  if (document.getElementById('statLecturersCount')) document.getElementById('statLecturersCount').textContent = getCount('Lecturer');
-  if (document.getElementById('statTeachingFellowsCount')) document.getElementById('statTeachingFellowsCount').textContent = getCount('Teaching Fellow');
-  if (document.getElementById('statGradAsstCount')) document.getElementById('statGradAsstCount').textContent = getCount('Graduate Assistant');
-  if (document.getElementById('statTeachAsstCount')) document.getElementById('statTeachAsstCount').textContent = getCount('Teaching Assistant');
+  const professors = targetInstructors.filter(i => (i.designation || '').toLowerCase() === 'professor').length;
+  const assocProfs = targetInstructors.filter(i => (i.designation || '').toLowerCase() === 'associate professor').length;
+  const asstProfs = targetInstructors.filter(i => (i.designation || '').toLowerCase() === 'assistant professor').length;
+  const lecturers = targetInstructors.filter(i => (i.designation || '').toLowerCase() === 'lecturer').length;
+  const teachingFellows = targetInstructors.filter(i => (i.designation || '').toLowerCase() === 'teaching fellow').length;
+  const gradAssts = targetInstructors.filter(i => (i.designation || '').toLowerCase() === 'graduate assistant').length;
+  const teachAssts = targetInstructors.filter(i => (i.designation || '').toLowerCase() === 'teaching assistant').length;
 
-  // Highlight Computer Science Faculty count (Requirement 7)
-  const csDept = masterDepartments.find(d => d.code === 'CS');
-  if (csDept) {
-    const csFaculty = masterInstructors.filter(i => Number(i.department_id) === Number(csDept.id));
-    if (document.getElementById('statCsFacultyTotal')) {
-      document.getElementById('statCsFacultyTotal').textContent = csFaculty.length;
+  if (document.getElementById('statProfessorsCount')) document.getElementById('statProfessorsCount').textContent = professors;
+  if (document.getElementById('statAssocProfCount')) document.getElementById('statAssocProfCount').textContent = assocProfs;
+  if (document.getElementById('statAsstProfCount')) document.getElementById('statAsstProfCount').textContent = asstProfs;
+  if (document.getElementById('statLecturersCount')) document.getElementById('statLecturersCount').textContent = lecturers;
+  if (document.getElementById('statTeachingFellowsCount')) document.getElementById('statTeachingFellowsCount').textContent = teachingFellows;
+  if (document.getElementById('statGradAsstCount')) document.getElementById('statGradAsstCount').textContent = gradAssts;
+  if (document.getElementById('statTeachAsstCount')) document.getElementById('statTeachAsstCount').textContent = teachAssts;
+
+  const csRefBox = document.querySelector('.cs-faculty-reference-box');
+  if (csRefBox) {
+    if (isDeptCoord && (currentUser.department_code || '').toUpperCase() !== 'CS') {
+      csRefBox.style.display = 'none';
+    } else {
+      csRefBox.style.display = 'flex';
+      const csDept = masterDepartments.find(d => (d.code || '').toUpperCase() === 'CS');
+      if (csDept) {
+        const csInstructors = masterInstructors.filter(i => Number(i.department_id) === Number(csDept.id)).length;
+        if (document.getElementById('statCsFacultyTotal')) document.getElementById('statCsFacultyTotal').textContent = csInstructors;
+      }
     }
   }
 
   // Populate faculty filter dropdowns
   const facultyDeptFilter = document.getElementById('facultyDeptFilter');
-  if (facultyDeptFilter && facultyDeptFilter.options.length <= 1) {
-    facultyDeptFilter.innerHTML = `<option value="">All Departments</option>` +
-      masterDepartments.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('');
+  if (facultyDeptFilter) {
+    if (isDeptCoord) {
+      facultyDeptFilter.innerHTML = `<option value="${currentUser.department_id}">${currentUser.department_name} (${currentUser.department_code})</option>`;
+      facultyDeptFilter.value = currentUser.department_id;
+      facultyDeptFilter.disabled = true;
+    } else if (facultyDeptFilter.options.length <= 1) {
+      facultyDeptFilter.innerHTML = `<option value="">All Departments</option>` +
+        masterDepartments.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('');
+    }
+  }
+
+  const workloadDeptFilter = document.getElementById('workloadDeptFilter');
+  if (workloadDeptFilter) {
+    if (isDeptCoord) {
+      workloadDeptFilter.innerHTML = `<option value="${currentUser.department_id}">${currentUser.department_name} (${currentUser.department_code})</option>`;
+      workloadDeptFilter.value = currentUser.department_id;
+      workloadDeptFilter.disabled = true;
+    } else if (workloadDeptFilter.options.length <= 1) {
+      workloadDeptFilter.innerHTML = `<option value="">All Departments</option>` +
+        masterDepartments.map(d => `<option value="${d.id}">${d.name} (${d.code})</option>`).join('');
+    }
   }
 }
 
@@ -2131,7 +2534,8 @@ function renderFacultyTable() {
   if (!tbody) return;
 
   const searchQuery = (document.getElementById('facultySearchInput')?.value || '').toLowerCase();
-  const deptFilter = document.getElementById('facultyDeptFilter')?.value || '';
+  const isDeptCoord = currentUser && currentUser.role === 'dept_admin' && currentUser.department_id;
+  const deptFilter = isDeptCoord ? currentUser.department_id : (document.getElementById('facultyDeptFilter')?.value || '');
   const desigFilter = document.getElementById('facultyDesigFilter')?.value || '';
 
   let filtered = [...masterInstructors];
@@ -2219,26 +2623,20 @@ async function renderAdminCredsTable() {
     `;
 
     users.forEach((u, idx) => {
-      const defaultPass = u.role === 'admin' ? 'admin123' : `${(u.department_code || 'dept').toLowerCase()}123`;
       html += `
         <tr>
           <td>${idx + 1}</td>
-          <td><strong><code>${u.username}</code></strong></td>
+          <td><strong>${u.username}</strong></td>
           <td>${u.full_name}</td>
           <td>${u.email || 'N/A'}</td>
-          <td><span class="badge ${u.role === 'admin' ? 'bg-green' : 'bg-blue'}" style="color:#fff;">${u.role === 'admin' ? 'Super Admin' : 'Dept Coordinator'}</span></td>
-          <td>${u.department_name ? `<span class="badge" style="background:${u.department_color || '#006633'}; color:#fff;">${u.department_code}</span> ${u.department_name}` : '<em>All Campus (Global)</em>'}</td>
-          <td><code>${defaultPass}</code></td>
+          <td><span class="badge ${u.role === 'admin' ? 'bg-purple' : 'bg-green'}" style="color:#fff;">${u.role}</span></td>
+          <td>${u.department_name ? `<span class="badge" style="background:${u.department_color || '#006633'}; color:#fff;">${u.department_name}</span>` : '<span class="text-muted">Central Admin</span>'}</td>
+          <td><code>${u.plain_password || '******'}</code></td>
         </tr>
       `;
     });
 
-    html += `
-          </tbody>
-        </table>
-      </div>
-    `;
-
+    html += `</tbody></table></div>`;
     container.innerHTML = html;
   } catch (err) {
     container.innerHTML = `<div class="form-error">Error loading coordinator credentials: ${err.message}</div>`;
@@ -2370,10 +2768,35 @@ function renderFacultyWorkloadTable() {
     return;
   }
 
+  const searchVal = (document.getElementById('workloadSearchInput')?.value || '').toLowerCase().trim();
+  const deptFilter = document.getElementById('workloadDeptFilter')?.value || '';
+  const desigFilter = document.getElementById('workloadDesigFilter')?.value || '';
+
+  const filteredInstructors = masterInstructors.filter(inst => {
+    if (deptFilter && Number(inst.department_id) !== Number(deptFilter)) return false;
+    if (desigFilter && (inst.designation || '').toLowerCase() !== desigFilter.toLowerCase()) return false;
+    if (searchVal) {
+      const matchName = (inst.name || '').toLowerCase().includes(searchVal);
+      const matchEmail = (inst.email || '').toLowerCase().includes(searchVal);
+      const assignedSlots = currentTimetableEntries.filter(e => Number(e.instructor_id) === Number(inst.id));
+      const matchCourse = assignedSlots.some(slot => {
+        const c = masterCourses.find(course => Number(course.id) === Number(slot.course_id));
+        return c && (c.course_name.toLowerCase().includes(searchVal) || c.course_code.toLowerCase().includes(searchVal));
+      });
+      if (!matchName && !matchEmail && !matchCourse) return false;
+    }
+    return true;
+  });
+
+  if (filteredInstructors.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted p-3">No matching faculty workload records found.</td></tr>`;
+    return;
+  }
+
   let totalUtilSum = 0;
   let html = '';
 
-  masterInstructors.forEach((inst) => {
+  filteredInstructors.forEach((inst) => {
     const dept = masterDepartments.find(d => Number(d.id) === Number(inst.department_id)) || {};
     const assignedSlots = currentTimetableEntries.filter(e => Number(e.instructor_id) === Number(inst.id));
 
@@ -2398,31 +2821,37 @@ function renderFacultyWorkloadTable() {
 
     html += `
       <tr>
-        <td>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <i class="fa-solid fa-user-graduate" style="color:var(--primary-color);"></i>
+        <td style="vertical-align: middle;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:36px; height:36px; border-radius:10px; background:rgba(0,102,51,0.1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <i class="fa-solid fa-user-graduate" style="color:var(--uet-green); font-size:1.1rem;"></i>
+            </div>
             <div>
-              <strong>${inst.name}</strong>
-              <div class="text-xs text-muted">${inst.email || 'No official email'}</div>
+              <strong style="font-size:0.95rem; color:var(--text-dark);">${inst.name}</strong>
+              <div class="text-xs text-muted" style="margin-top:2px;">${inst.email || 'No official email'}</div>
             </div>
           </div>
         </td>
-        <td><span class="badge bg-purple" style="color:#fff;">${inst.designation || 'Lecturer'}</span></td>
-        <td><span class="badge" style="background:${dept.color || '#006633'}; color:#fff;">${dept.code || 'Dept'}</span></td>
-        <td style="max-width: 250px;"><div class="text-xs text-truncate">${coursesListStr}</div></td>
-        <td><strong>${totalCreditHours}</strong> hrs</td>
-        <td>${targetCreditHours} hrs</td>
-        <td>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="badge bg-purple" style="color:#fff; font-weight:600; padding:5px 10px; font-size:0.8rem;">${inst.designation || 'Lecturer'}</span></td>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="badge" style="background:${dept.color || '#006633'}; color:#fff; font-weight:700; padding:5px 10px;">${dept.code || 'Dept'}</span></td>
+        <td style="max-width: 250px; vertical-align: middle;"><div class="text-xs text-truncate">${coursesListStr}</div></td>
+        <td style="vertical-align: middle; white-space:nowrap;"><strong style="font-size:0.95rem; color:var(--text-dark);">${totalCreditHours}</strong> <span class="text-xs text-muted">hrs</span></td>
+        <td style="vertical-align: middle; white-space:nowrap;"><span class="text-sm text-muted">${targetCreditHours} hrs</span></td>
+        <td style="vertical-align: middle; min-width: 130px;">
           <div style="display:flex; align-items:center; gap:8px;">
-            <div class="progress-bar-bg" style="flex:1; height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
-              <div style="width:${workloadPct}%; height:100%; background:${statusObj.color};"></div>
+            <div class="progress-bar-bg" style="flex:1; height:8px; background:#e2e8f0; border-radius:6px; overflow:hidden;">
+              <div style="width:${workloadPct}%; height:100%; background:${statusObj.color}; border-radius:6px;"></div>
             </div>
-            <strong class="text-sm">${workloadPct}%</strong>
+            <strong class="text-sm" style="color:${statusObj.color}; font-weight:700;">${workloadPct}%</strong>
           </div>
         </td>
-        <td><span class="badge ${statusObj.badgeClass}" style="color:${statusObj.badgeColor};">${statusObj.label}</span></td>
-        <td>
-          <button class="btn btn-sm btn-outline" onclick="openFacultyProfileModal(${inst.id})">
+        <td style="vertical-align: middle; white-space: nowrap;">
+          <span class="badge ${statusObj.badgeClass}" style="color:${statusObj.badgeColor}; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; padding:6px 12px; font-weight:600; font-size:0.8rem; border-radius:20px;">
+            <i class="fa-solid fa-shield-halved"></i> ${statusObj.label}
+          </span>
+        </td>
+        <td style="vertical-align: middle;">
+          <button class="btn btn-sm btn-outline" style="white-space:nowrap;" onclick="openFacultyProfileModal(${inst.id})">
             <i class="fa-solid fa-address-card"></i> View Contact Profile
           </button>
         </td>
@@ -2430,7 +2859,7 @@ function renderFacultyWorkloadTable() {
     `;
   });
 
-  const avgFacultyUtil = masterInstructors.length > 0 ? Math.round(totalUtilSum / masterInstructors.length) : 0;
+  const avgFacultyUtil = filteredInstructors.length > 0 ? Math.round(totalUtilSum / filteredInstructors.length) : 0;
   if (document.getElementById('badgeAvgFacultyUtilization')) {
     document.getElementById('badgeAvgFacultyUtilization').textContent = `${avgFacultyUtil}% Avg Faculty Workload`;
   }

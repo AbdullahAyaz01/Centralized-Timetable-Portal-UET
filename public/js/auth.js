@@ -75,20 +75,49 @@ function updateAuthUI() {
     }
 
     if (userProfileContainer) {
+      const initials = currentUser.full_name
+        ? currentUser.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+        : 'U';
+      const roleText = currentUser.role === 'admin' ? 'Super Admin' : (currentUser.department_code ? `${currentUser.department_code} Head` : 'Coordinator');
+
       userProfileContainer.innerHTML = `
-        <div class="user-badge" style="display:flex; align-items:center; gap:10px;">
-          <span class="user-name"><strong>${currentUser.full_name}</strong> ${deptBadgeHtml}</span>
-          <button class="btn btn-outline btn-sm" onclick="switchMainView('viewSettings', document.getElementById('navSettings'))" title="Account Settings">
-            <i class="fa-solid fa-gear"></i> Settings
+        <div class="user-profile-btn" onclick="toggleProfileDropdown(event)">
+          <div class="profile-avatar-circle" style="background:${currentUser.department_color || 'var(--uet-green)'}">
+            ${initials}
+          </div>
+          <div class="profile-info-text">
+            <strong>${currentUser.full_name}</strong>
+            <span>${roleText}</span>
+          </div>
+          <i class="fa-solid fa-chevron-down profile-dropdown-arrow"></i>
+        </div>
+
+        <div class="profile-dropdown-menu" id="profileDropdownMenu" onclick="event.stopPropagation()">
+          <div class="dropdown-header-box">
+            <div class="user-full-name">${currentUser.full_name}</div>
+            <div class="user-email-text">${currentUser.email || currentUser.username + '@uet.edu.pk'}</div>
+            <div class="mt-1">
+              <span class="badge" style="background:${currentUser.department_color || '#006633'}; color:#fff; font-size:0.75rem;">
+                ${currentUser.role === 'admin' ? 'Super Admin' : currentUser.department_name || 'Department Head'}
+              </span>
+            </div>
+          </div>
+
+          <button class="dropdown-menu-item" onclick="closeProfileDropdown(); switchMainView('viewSettings', document.getElementById('navSettings'))">
+            <i class="fa-solid fa-user-gear" style="color:var(--uet-green);"></i> Account Settings
           </button>
-          <button class="btn btn-outline btn-sm" onclick="handleLogout()">
+
+          <button class="dropdown-menu-item logout-item" onclick="closeProfileDropdown(); handleLogout()">
             <i class="fa-solid fa-right-from-bracket"></i> Logout
           </button>
         </div>
       `;
     }
 
+    const navDashboard = document.getElementById('navDashboard');
+
     if (currentUser.role === 'admin') {
+      if (navDashboard) navDashboard.style.display = 'none';
       if (btnTreeAddDept) btnTreeAddDept.style.display = 'inline-flex';
       if (navAdminCreds) navAdminCreds.style.display = 'block';
       if (btnAddRoom) btnAddRoom.style.display = 'inline-flex';
@@ -100,7 +129,14 @@ function updateAuthUI() {
       if (btnAddSlot) btnAddSlot.style.display = 'none';
       if (btnClearDeptTimetable) btnClearDeptTimetable.style.display = 'none';
 
+      // Super Admin is NOT allowed to access Campus Resource Utilization section
+      const activeView = document.querySelector('.main-view.active');
+      if (!activeView || activeView.id === 'viewDashboard') {
+        switchMainView('viewDeptsTree', document.getElementById('navDepts'));
+      }
+
     } else if (currentUser.role === 'dept_admin') {
+      if (navDashboard) navDashboard.style.display = 'block';
       if (btnDashboardAddSlot) btnDashboardAddSlot.style.display = 'inline-flex';
       if (btnAddSlot) btnAddSlot.style.display = 'inline-flex';
       if (btnTreeAddDept) btnTreeAddDept.style.display = 'none';
@@ -297,3 +333,27 @@ async function handleUpdateSettings(e) {
     }
   }
 }
+
+// Profile Dropdown Toggle Helpers
+function toggleProfileDropdown(e) {
+  if (e) e.stopPropagation();
+  const container = document.getElementById('userProfileContainer');
+  if (container) {
+    container.classList.toggle('open');
+  }
+}
+
+function closeProfileDropdown() {
+  const container = document.getElementById('userProfileContainer');
+  if (container) {
+    container.classList.remove('open');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const container = document.getElementById('userProfileContainer');
+  if (container && !container.contains(e.target)) {
+    container.classList.remove('open');
+  }
+});
+

@@ -34,8 +34,14 @@ app.use(session({
   }
 }));
 
-// Static Files
-app.use(express.static(path.join(__dirname, 'public')));
+// Static Files with Cache-Busting headers
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  maxAge: 0,
+  setHeaders: (res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  }
+}));
 
 // API Routes
 app.use('/api/auth', authRoutes);
